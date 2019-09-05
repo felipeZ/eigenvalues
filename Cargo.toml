@@ -2,8 +2,18 @@
 name = "davidson"
 version = "0.1.0"
 authors = ["felipe <tifonzafel@gmail.com>"]
+description = "Davidson diagonalization algorithms"
+readme = "README.md"
+categories = [ "science" ]
+keywords = [ "linear-algebra", "quantum-chemistry" ]
+license = "Apache-2.0"
 edition = "2018"
+x
 
 [dependencies]
 nalgebra = "0.18.1"
 rayon = "1.2.0"
+
+[lib]
+name = "davidson"
+path = "src/lib.rs"
