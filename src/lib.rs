@@ -1,4 +1,8 @@
 #[cfg(test)]
+
+pub mod davidson;
+
+
 mod tests {
     #[test]
     fn it_works() {
