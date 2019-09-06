@@ -4,6 +4,29 @@ extern crate nalgebra as na;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector, Dynamic};
 
+/// Structure containing the initial configuration data
+struct Config {
+    method: String,
+    tolerance: f64,
+    max_iters: usize,
+    max_dim_sub: usize,
+    init_dim: usize,
+}
+
+impl Config {
+    /// Choose sensible default values for the davidson algorithm, where:
+    /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
+    fn new(nvalues: usize) -> Self {
+        Config {
+            method: String::from("DPR"),
+            tolerance: 1e-8,
+            max_iters: 100,
+            max_dim_sub: nvalues * 10,
+            init_dim: nvalues * 2,
+        }
+    }
+}
+
 /// Structure with the configuration data
 pub struct EigenDavidson {
     pub eigenvalues: DVector<f64>,
@@ -15,72 +38,64 @@ impl EigenDavidson {
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
 
-    pub fn new(h: DMatrix<f64>, nvalues: usize)  -> Result<EigenDavidson, &'static str> {
+    pub fn new(h: DMatrix<f64>, nvalues: usize) -> Result<Self, &'static str> {
+        // Initial configuration
+        let conf = Config::new(nvalues);
 
-    // Maximum number of iterations
-    let max_iters = 100;
-    
-    // Numerical tolerance of the algorithm
-    const TOLERANCE: f64 = 1e-8;
+        // Initial subpace
+        let mut dim_sub = conf.init_dim;
+        // 1. Select the initial ortogonal subspace based on lowest elements
+        let mut basis = generate_subspace(&h.diagonal(), conf.max_dim_sub);
 
-    // Method to compute the correction
-    let method = "DPR";
+        // Outer loop block Davidson schema
+        let mut result = Err("Algorithm didn't converge!");
+        for i in 0..conf.max_iters {
+            // 2. Generate subpace matrix problem by projecting into the basis
+            let subspace = basis.columns(0, dim_sub);
+            let matrix_proj = subspace.transpose() * (&h * subspace);
 
-    // Data used for the algorithm
-    let max_dim_sub = nvalues * 10;
+            // 3. compute the eigenvalues and their corresponding ritz_vectors
+            let eig = SymmetricEigen::new(matrix_proj);
 
-    // Initial subpace
-    let mut dim_sub = nvalues * 2;
-    // 1. Select the initial ortogonal subspace based on lowest elements
-    let mut basis = generate_subspace(&h.diagonal(), max_dim_sub);
+            // 4. Check for convergence
+            // 4.1 Compute the residues
+            let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
+            let residues = compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
 
-    // Outer loop block Davidson schema
-    let mut result = Err("Algorithm didn't converge!");
-    for i in 0..max_iters {
-        // 2. Generate subpace matrix problem by projecting into the basis
-        let subspace = basis.columns(0, dim_sub);
-        let matrix_proj = subspace.transpose() * (&h * subspace);
+            // 4.2 Check Converge for each pair eigenvalue/eigenvector
+            let errors = DVector::<f64>::from_iterator(
+                nvalues,
+                residues.column_iter().map(|col| col.norm()),
+            );
 
-        // 3. compute the eigenvalues and their corresponding ritz_vectors
-        let eig = SymmetricEigen::new(matrix_proj);
+            // 4.3 Check if all eigenvalues/eigenvectors have converged
+            if errors.iter().all(|&x| x < conf.tolerance) {
+                result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
+                break;
+            }
+            // 5. Update subspace basis set
+            // 5.1 Add the correction vectors to the current basis
+            if dim_sub <= conf.max_dim_sub {
+                let correction = compute_correction(&h, residues, eig, &conf.method);
+                update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
-        // 4. Check for convergence
-        // 4.1 Compute the residues
-        let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
-        let residues = compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
+                // 6. Orthogonalize the subspace
+                basis = orthogonalize_subspace(basis);
+                // update counter
+                dim_sub *= 2;
 
-        // 4.2 Check Converge for each pair eigenvalue/eigenvector
-        let errors =
-            DVector::<f64>::from_iterator(nvalues, residues.column_iter().map(|col| col.norm()));
-
-        // 4.3 Check if all eigenvalues/eigenvectors have converged
-        if errors.iter().all(|&x| x < TOLERANCE) {
-            result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
-            break;
+            // 5.2 Otherwise reduce the basis of the subspace to the current correction
+            } else {
+                dim_sub = conf.init_dim;
+                basis.fill(0.0);
+                update_subspace(&mut basis, ritz_vectors, 0, dim_sub);
+            }
+            // Check number of iterations
+            if i > conf.max_iters {
+                break;
+            }
         }
-        // 5. Update subspace basis set
-        // 5.1 Add the correction vectors to the current basis
-        if dim_sub <= max_dim_sub {
-            let correction = compute_correction(&h, residues, eig, &method);
-            update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
-
-            // 6. Orthogonalize the subspace
-            basis = orthogonalize_subspace(basis);
-            // update counter
-            dim_sub *= 2;
-
-        // 5.2 Otherwise reduce the basis of the subspace to the current correction
-        } else {
-            dim_sub = nvalues * 2;
-            basis.fill(0.0);
-            update_subspace(&mut basis, ritz_vectors, 0, dim_sub);
-        }
-        // Check number of iterations
-        if i > max_iters {
-            break;
-        }
-    }
-    result
+        result
     }
 }
 
@@ -181,7 +196,7 @@ fn compute_gjd_correction(
         t2.set_diagonal(&(*r * &ones));
         let arr = &t1 * t2 * &t1;
         // Solve the linear system
-        let decomp = arr.lu(); 
+        let decomp = arr.lu();
         let mut b = -residues.column(k);
         decomp.solve_mut(&mut b);
         correction.set_column(k, &b);
