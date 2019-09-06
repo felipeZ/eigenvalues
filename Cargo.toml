@@ -8,7 +8,6 @@ categories = [ "science" ]
 keywords = [ "linear-algebra", "quantum-chemistry" ]
 license = "Apache-2.0"
 edition = "2018"
-x
 
 [dependencies]
 nalgebra = "0.18.1"
