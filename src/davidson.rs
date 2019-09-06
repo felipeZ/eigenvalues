@@ -1,16 +1,25 @@
 //! ### Davidson implementation
 
 extern crate nalgebra as na;
-use na::{DMatrix, DVector};
+use na::linalg::SymmetricEigen;
+use na::{DMatrix, DVector, Dynamic};
 
 /// Structure with the configuration data
-pub struct Eigen {
+pub struct EigenDavidson {
     pub eigenvalues: DVector<f64>,
     pub eigenvectors: DMatrix<f64>,
 }
 
-/// API
-pub fn davidson(h: DMatrix<f64>, nvalues: usize, max_iters: usize) -> Result<Eigen, &'static str> {
+impl EigenDavidson {
+    /// The new static method takes the following arguments:
+    /// * `h` - A highly diagonal symmetric matrix
+    /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
+
+    pub fn new(h: DMatrix<f64>, nvalues: usize)  -> Result<EigenDavidson, &'static str> {
+
+    // Maximum number of iterations
+    let max_iters = 100;
+    
     // Numerical tolerance of the algorithm
     const TOLERANCE: f64 = 1e-8;
 
@@ -26,14 +35,14 @@ pub fn davidson(h: DMatrix<f64>, nvalues: usize, max_iters: usize) -> Result<Eig
     let mut basis = generate_subspace(&h.diagonal(), max_dim_sub);
 
     // Outer loop block Davidson schema
-    let mut i = 0;
-    loop {
-        // 2. Generate subpace matrix problem by projecting into V
+    let mut result = Err("Algorithm didn't converge!");
+    for i in 0..max_iters {
+        // 2. Generate subpace matrix problem by projecting into the basis
         let subspace = basis.columns(0, dim_sub);
         let matrix_proj = subspace.transpose() * (&h * subspace);
 
         // 3. compute the eigenvalues and their corresponding ritz_vectors
-        let eig = na::linalg::SymmetricEigen::new(matrix_proj);
+        let eig = SymmetricEigen::new(matrix_proj);
 
         // 4. Check for convergence
         // 4.1 Compute the residues
@@ -41,17 +50,18 @@ pub fn davidson(h: DMatrix<f64>, nvalues: usize, max_iters: usize) -> Result<Eig
         let residues = compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
 
         // 4.2 Check Converge for each pair eigenvalue/eigenvector
-        let mut errors =
+        let errors =
             DVector::<f64>::from_iterator(nvalues, residues.column_iter().map(|col| col.norm()));
 
         // 4.3 Check if all eigenvalues/eigenvectors have converged
         if errors.iter().all(|&x| x < TOLERANCE) {
+            result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
             break;
         }
         // 5. Update subspace basis set
         // 5.1 Add the correction vectors to the current basis
         if dim_sub <= max_dim_sub {
-            let correction = compute_correction(&h, &residues, &eig.eigenvalues, &method);
+            let correction = compute_correction(&h, residues, eig, &method);
             update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
             // 6. Orthogonalize the subspace
@@ -70,12 +80,27 @@ pub fn davidson(h: DMatrix<f64>, nvalues: usize, max_iters: usize) -> Result<Eig
             break;
         }
     }
-    let eigenvalues = DVector::<f64>::zeros(3);
-    let eigenvectors = DMatrix::<f64>::identity(3, 3);
-    Ok(Eigen {
+    result
+    }
+}
+
+/// Extract the requested eigenvalues/eigenvectors pairs
+fn create_results(
+    subspace_eigenvalues: &DVector<f64>,
+    ritz_vectors: &DMatrix<f64>,
+    nvalues: usize,
+) -> EigenDavidson {
+    let eigenvectors = DMatrix::<f64>::from_iterator(
+        ritz_vectors.nrows(),
+        nvalues,
+        subspace_eigenvalues.columns(0, nvalues).iter().cloned(),
+    );
+    let eigenvalues =
+        DVector::<f64>::from_iterator(nvalues, ritz_vectors.rows(0, nvalues).iter().cloned());
+    EigenDavidson {
         eigenvalues,
         eigenvectors,
-    })
+    }
 }
 
 /// Update the subpace with new vectors
@@ -110,12 +135,13 @@ fn compute_residues(
 /// compute the correction vectors using either DPR or GJD
 fn compute_correction(
     h: &DMatrix<f64>,
-    residues: &DMatrix<f64>,
-    eigenvalues: &DVector<f64>,
+    residues: DMatrix<f64>,
+    eigenpairs: SymmetricEigen<f64, Dynamic>,
     method: &str,
 ) -> DMatrix<f64> {
     match method.to_uppercase().as_ref() {
-        "DPR" => compute_dpr_correction(&h, &residues, &eigenvalues),
+        "DPR" => compute_dpr_correction(&h, residues, &eigenpairs.eigenvalues),
+        "GJD" => compute_gjd_correction(&h, residues, &eigenpairs),
         _ => panic!("Method {} has not been implemented", method),
     }
 }
@@ -123,7 +149,7 @@ fn compute_correction(
 /// Use the Diagonal-Preconditioned-Residue (DPR) method to compute the correction
 fn compute_dpr_correction(
     h: &DMatrix<f64>,
-    residues: &DMatrix<f64>,
+    residues: DMatrix<f64>,
     eigenvalues: &DVector<f64>,
 ) -> DMatrix<f64> {
     let d = h.diagonal();
@@ -136,6 +162,33 @@ fn compute_dpr_correction(
     correction
 }
 
+/// Use the Generalized Jacobi Davidson (GJD) to compute the correction
+fn compute_gjd_correction(
+    h: &DMatrix<f64>,
+    residues: DMatrix<f64>,
+    eigenpairs: &SymmetricEigen<f64, Dynamic>,
+) -> DMatrix<f64> {
+    let dimx = h.nrows();
+    let dimy = eigenpairs.eigenvalues.nrows();
+    let id = DMatrix::<f64>::identity(dimx, dimx);
+    let ones = DVector::<f64>::repeat(dimx, 1.0);
+    let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
+    for (k, r) in eigenpairs.eigenvalues.iter().enumerate() {
+        // Create the components of the linear system
+        let x = eigenpairs.eigenvectors.column(k);
+        let t1 = &id - x * x.transpose();
+        let mut t2 = h.clone();
+        t2.set_diagonal(&(*r * &ones));
+        let arr = &t1 * t2 * &t1;
+        // Solve the linear system
+        let decomp = arr.lu(); 
+        let mut b = -residues.column(k);
+        decomp.solve_mut(&mut b);
+        correction.set_column(k, &b);
+    }
+    correction
+}
+
 /// Generate initial orthonormal subspace
 fn generate_subspace(diag: &DVector<f64>, max_dim_sub: usize) -> DMatrix<f64> {
     // TODO implement the case when the diagonal is not sorted
@@ -144,10 +197,16 @@ fn generate_subspace(diag: &DVector<f64>, max_dim_sub: usize) -> DMatrix<f64> {
 
 #[cfg(test)]
 mod test {
+    extern crate nalgebra as na;
+    use na::{DMatrix, DVector};
 
     #[test]
-    fn test_something() {
-        let universe = 42;
-        assert_eq!(universe, 42);
+    fn test_update_subspace() {
+        let mut arr = DMatrix::<f64>::repeat(3, 3, 1.);
+        let brr = DMatrix::<f64>::zeros(3, 2);
+        super::update_subspace(&mut arr, brr, 0, 2);
+        assert_eq!(arr.column(1).sum(), 0.);
+        assert_eq!(arr.column(2).sum(), 3.);
     }
+
 }
