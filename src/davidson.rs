@@ -12,7 +12,6 @@ struct Config {
     max_dim_sub: usize,
     init_dim: usize,
 }
-
 impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
@@ -25,6 +24,7 @@ impl Config {
             init_dim: nvalues * 2,
         }
     }
+
 }
 
 /// Structure with the configuration data

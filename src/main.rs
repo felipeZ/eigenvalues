@@ -9,6 +9,4 @@ fn main() {
   brr += &brr.transpose();
   brr *= 0.005;
   brr.set_diagonal(&vs);
-  let arr = DMatrix::<f64>::identity(3, 3);
-  println !("arr:{}", arr);
 }
