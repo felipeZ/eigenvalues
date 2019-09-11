@@ -24,7 +24,6 @@ impl Config {
             init_dim: nvalues * 2,
         }
     }
-
 }
 
 /// Structure with the configuration data
@@ -49,14 +48,15 @@ impl EigenDavidson {
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
-        for i in 0..conf.max_iters {
+        // for i in 0..conf.max_iters {
+        for i in 0..1 {
             // 2. Generate subpace matrix problem by projecting into the basis
             let subspace = basis.columns(0, dim_sub);
             let matrix_proj = subspace.transpose() * (&h * subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
-            let eig = SymmetricEigen::new(matrix_proj);
-
+            let eig = sort_eigenpairs(SymmetricEigen::new(matrix_proj));
+            println!("eigenvalues:{}", eig.eigenvalues);
             // 4. Check for convergence
             // 4.1 Compute the residues
             let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
@@ -65,7 +65,10 @@ impl EigenDavidson {
             // 4.2 Check Converge for each pair eigenvalue/eigenvector
             let errors = DVector::<f64>::from_iterator(
                 nvalues,
-                residues.column_iter().map(|col| col.norm()),
+                residues
+                    .columns(0, nvalues)
+                    .column_iter()
+                    .map(|col| col.norm()),
             );
 
             // 4.3 Check if all eigenvalues/eigenvectors have converged
@@ -77,6 +80,7 @@ impl EigenDavidson {
             // 5.1 Add the correction vectors to the current basis
             if dim_sub <= conf.max_dim_sub {
                 let correction = compute_correction(&h, residues, eig, &conf.method);
+                println!("correction:{}", correction);
                 update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
                 // 6. Orthogonalize the subspace
@@ -170,7 +174,9 @@ fn compute_dpr_correction(
     let d = h.diagonal();
     let mut correction = DMatrix::<f64>::zeros(h.nrows(), residues.ncols());
     for (k, r) in eigenvalues.iter().enumerate() {
+        println!("DPR");
         let rs = DVector::<f64>::repeat(h.nrows(), *r);
+        println!("rs:{}", rs);
         let x = (rs - &d) * residues.column(k);
         correction.set_column(k, &x);
     }
@@ -208,6 +214,37 @@ fn compute_gjd_correction(
 fn generate_subspace(diag: &DVector<f64>, max_dim_sub: usize) -> DMatrix<f64> {
     // TODO implement the case when the diagonal is not sorted
     DMatrix::<f64>::identity(diag.nrows(), max_dim_sub)
+}
+
+/// Sort the eigenvalues and their corresponding eigenvectors in ascending order
+fn sort_eigenpairs(eig: SymmetricEigen<f64, Dynamic>) -> SymmetricEigen<f64, Dynamic> {
+    // Sort the eigenvalues
+    let mut vs: Vec<(f64, usize)> = eig
+        .eigenvalues
+        .iter()
+        .enumerate()
+        .map(|(idx, &x)| (x, idx))
+        .collect();
+    vs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+
+    // Sorted eigenvalues
+    let eigenvalues = DVector::<f64>::from_iterator(vs.len(), vs.iter().map(|t| t.0));
+
+    // Indices of the sorted eigenvalues
+    let indices: Vec<_> = vs.iter().map(|t| t.1).collect();
+
+    // Create sorted eigenvectors
+    let dim_rows = eig.eigenvectors.nrows();
+    let dim_cols = eig.eigenvectors.ncols();
+    let mut eigenvectors = DMatrix::<f64>::zeros(dim_rows, dim_cols);
+
+    for i in 0..dim_cols {
+        eigenvectors.set_column(i, &eig.eigenvectors.column(indices[i]));
+    }
+    SymmetricEigen {
+        eigenvalues,
+        eigenvectors,
+    }
 }
 
 #[cfg(test)]

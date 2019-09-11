@@ -22,6 +22,7 @@ Available correction methods are:
 */
 
 pub mod davidson;
+pub use davidson::EigenDavidson;
 
 #[cfg(test)]
 mod tests {
