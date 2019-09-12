@@ -12,6 +12,6 @@ fn main() {
     brr *= 0.005;
     brr.set_diagonal(&vs);
     println!("brr:{}", brr);
-    let mut eig = na::linalg::SymmetricEigen::new(brr);
-    // let eig = EigenDavidson::new(brr, 2);
+    // let mut eig = na::linalg::SymmetricEigen::new(brr);
+    let eig = EigenDavidson::new(brr, 2);
 }

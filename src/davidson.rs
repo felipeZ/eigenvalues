@@ -15,12 +15,18 @@ struct Config {
 impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
-    fn new(nvalues: usize) -> Self {
+    /// * `dim` - dimension of the matrix to diagonalize
+    fn new(nvalues: usize, dim: usize) -> Self {
+        let max_dim_sub = if nvalues * 10 < dim {
+            nvalues * 10
+        } else {
+            dim
+        };
         Config {
             method: String::from("DPR"),
             tolerance: 1e-8,
             max_iters: 100,
-            max_dim_sub: nvalues * 10,
+            max_dim_sub: max_dim_sub,
             init_dim: nvalues * 2,
         }
     }
@@ -39,7 +45,7 @@ impl EigenDavidson {
 
     pub fn new(h: DMatrix<f64>, nvalues: usize) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues);
+        let conf = Config::new(nvalues, h.nrows());
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
@@ -49,10 +55,12 @@ impl EigenDavidson {
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
         // for i in 0..conf.max_iters {
-        for i in 0..1 {
+        for i in 0..5 {
+            println!("Iter:{}", i);
             // 2. Generate subpace matrix problem by projecting into the basis
-            let subspace = basis.columns(0, dim_sub);
+            let mut subspace = basis.columns(0, dim_sub);
             let matrix_proj = subspace.transpose() * (&h * subspace);
+            println!("matrix_proj:{}", matrix_proj);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let eig = sort_eigenpairs(SymmetricEigen::new(matrix_proj));
@@ -72,15 +80,15 @@ impl EigenDavidson {
             );
 
             // 4.3 Check if all eigenvalues/eigenvectors have converged
+            println!("Errors:{}", errors);
             if errors.iter().all(|&x| x < conf.tolerance) {
                 result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
                 break;
             }
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if dim_sub <= conf.max_dim_sub {
+            if 2 * dim_sub <= conf.max_dim_sub {
                 let correction = compute_correction(&h, residues, eig, &conf.method);
-                println!("correction:{}", correction);
                 update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
                 // 6. Orthogonalize the subspace
@@ -124,14 +132,18 @@ fn create_results(
 
 /// Update the subpace with new vectors
 fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize, end: usize) {
+    let mut i = 0; // indices for the new vector to add
     for k in start..end {
-        basis.set_column(k, &vectors.column(k));
+        basis.set_column(k, &vectors.column(i));
+        i += 1;
     }
 }
 
 /// Orthogonalize the subpsace using the QR method
 fn orthogonalize_subspace(basis: DMatrix<f64>) -> DMatrix<f64> {
+    println!("Orthogonalize:{}",basis);    
     let qr = na::linalg::QR::new(basis);
+    println!("q matrix:{}", qr.q());
     qr.q()
 }
 
@@ -174,10 +186,8 @@ fn compute_dpr_correction(
     let d = h.diagonal();
     let mut correction = DMatrix::<f64>::zeros(h.nrows(), residues.ncols());
     for (k, r) in eigenvalues.iter().enumerate() {
-        println!("DPR");
         let rs = DVector::<f64>::repeat(h.nrows(), *r);
-        println!("rs:{}", rs);
-        let x = (rs - &d) * residues.column(k);
+        let x = residues.column(k).component_mul(&(rs - &d));
         correction.set_column(k, &x);
     }
     correction
