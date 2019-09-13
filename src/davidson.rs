@@ -3,6 +3,7 @@
 extern crate nalgebra as na;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector, Dynamic};
+use std::f64;
 
 /// Structure containing the initial configuration data
 struct Config {
@@ -54,17 +55,14 @@ impl EigenDavidson {
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
-        // for i in 0..conf.max_iters {
-        for i in 0..5 {
-            println!("Iter:{}", i);
+        for i in 0..conf.max_iters {
             // 2. Generate subpace matrix problem by projecting into the basis
-            let mut subspace = basis.columns(0, dim_sub);
+            let subspace = basis.columns(0, dim_sub);
             let matrix_proj = subspace.transpose() * (&h * subspace);
-            println!("matrix_proj:{}", matrix_proj);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let eig = sort_eigenpairs(SymmetricEigen::new(matrix_proj));
-            println!("eigenvalues:{}", eig.eigenvalues);
+
             // 4. Check for convergence
             // 4.1 Compute the residues
             let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
@@ -80,7 +78,6 @@ impl EigenDavidson {
             );
 
             // 4.3 Check if all eigenvalues/eigenvectors have converged
-            println!("Errors:{}", errors);
             if errors.iter().all(|&x| x < conf.tolerance) {
                 result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
                 break;
@@ -120,10 +117,10 @@ fn create_results(
     let eigenvectors = DMatrix::<f64>::from_iterator(
         ritz_vectors.nrows(),
         nvalues,
-        subspace_eigenvalues.columns(0, nvalues).iter().cloned(),
+        ritz_vectors.columns(0, nvalues).iter().cloned(),
     );
     let eigenvalues =
-        DVector::<f64>::from_iterator(nvalues, ritz_vectors.rows(0, nvalues).iter().cloned());
+        DVector::<f64>::from_iterator(nvalues, subspace_eigenvalues.rows(0, nvalues).iter().cloned());
     EigenDavidson {
         eigenvalues,
         eigenvectors,
@@ -141,9 +138,7 @@ fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize
 
 /// Orthogonalize the subpsace using the QR method
 fn orthogonalize_subspace(basis: DMatrix<f64>) -> DMatrix<f64> {
-    println!("Orthogonalize:{}",basis);    
     let qr = na::linalg::QR::new(basis);
-    println!("q matrix:{}", qr.q());
     qr.q()
 }
 
@@ -222,8 +217,21 @@ fn compute_gjd_correction(
 
 /// Generate initial orthonormal subspace
 fn generate_subspace(diag: &DVector<f64>, max_dim_sub: usize) -> DMatrix<f64> {
-    // TODO implement the case when the diagonal is not sorted
-    DMatrix::<f64>::identity(diag.nrows(), max_dim_sub)
+    if is_sorted(diag) {
+        DMatrix::<f64>::identity(diag.nrows(), max_dim_sub)
+    } else {
+        // TODO implement the case when the diagonal is not sorted
+        panic!("Matrix diagonal elements are not sorted")
+    }
+}
+
+/// Check if a vector is sorted in ascending order
+fn is_sorted(xs: &DVector<f64>) -> bool {
+    let mut d: Vec<f64> = xs.iter().cloned().collect();
+    d.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    let vs: DVector<f64> = DVector::<f64>::from_vec(d);
+    let r = xs - vs;
+    r.norm() < f64::EPSILON
 }
 
 /// Sort the eigenvalues and their corresponding eigenvectors in ascending order
