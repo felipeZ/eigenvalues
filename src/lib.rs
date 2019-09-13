@@ -21,8 +21,8 @@ Available correction methods are:
 
 */
 
-pub mod davidson;
-pub use davidson::EigenDavidson;
+pub mod algorithm;
+pub use algorithm::EigenDavidson;
 
 #[cfg(test)]
 mod tests {
