@@ -19,6 +19,7 @@ Available correction methods are:
 */
 
 extern crate nalgebra as na;
+use crate::utils;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector, Dynamic};
 use std::f64;
@@ -79,7 +80,7 @@ impl EigenDavidson {
             let matrix_proj = subspace.transpose() * (&h * subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
-            let eig = sort_eigenpairs(SymmetricEigen::new(matrix_proj));
+            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj));
 
             // 4. Check for convergence
             // 4.1 Compute the residues
@@ -252,37 +253,6 @@ fn is_sorted(xs: &DVector<f64>) -> bool {
     let vs: DVector<f64> = DVector::<f64>::from_vec(d);
     let r = xs - vs;
     r.norm() < f64::EPSILON
-}
-
-/// Sort the eigenvalues and their corresponding eigenvectors in ascending order
-fn sort_eigenpairs(eig: SymmetricEigen<f64, Dynamic>) -> SymmetricEigen<f64, Dynamic> {
-    // Sort the eigenvalues
-    let mut vs: Vec<(f64, usize)> = eig
-        .eigenvalues
-        .iter()
-        .enumerate()
-        .map(|(idx, &x)| (x, idx))
-        .collect();
-    vs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-
-    // Sorted eigenvalues
-    let eigenvalues = DVector::<f64>::from_iterator(vs.len(), vs.iter().map(|t| t.0));
-
-    // Indices of the sorted eigenvalues
-    let indices: Vec<_> = vs.iter().map(|t| t.1).collect();
-
-    // Create sorted eigenvectors
-    let dim_rows = eig.eigenvectors.nrows();
-    let dim_cols = eig.eigenvectors.ncols();
-    let mut eigenvectors = DMatrix::<f64>::zeros(dim_rows, dim_cols);
-
-    for i in 0..dim_cols {
-        eigenvectors.set_column(i, &eig.eigenvectors.column(indices[i]));
-    }
-    SymmetricEigen {
-        eigenvalues,
-        eigenvectors,
-    }
 }
 
 #[cfg(test)]
