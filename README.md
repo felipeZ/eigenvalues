@@ -1,11 +1,10 @@
-Davidson Eigensolver
-===================
-This package contains an implementation of the *Davidson diagonalization algorithms* in [Rust](https://www.rust-lang.org/).
-Different schemas are available to compute the correction.
+Eigenvalue Decomposition
+========================
+This package contains some implementations for computing the eigenvalues of a symmetric matrix,
+implemented in [Rust](https://www.rust-lang.org/).
 
-Available correction methods are:
- * **DPR**: Diagonal-Preconditioned-Residue
- * **GJD**: Generalized Jacobi Davidson
+Available Algorithms:
+ * **Davidson** using either  Diagonal-Preconditioned-Residue (**DPR**) or Generalized Jacobi Davidson (**GJD**).
 
 
 ### Note:
