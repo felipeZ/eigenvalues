@@ -1,11 +1,11 @@
 [package]
-name = "davidson"
+name = "eigenvalues"
 version = "0.1.0"
 authors = ["felipe <tifonzafel@gmail.com>"]
-description = "Davidson diagonalization algorithms"
+description = "algorithms to diagonalize symmetric matrices"
 readme = "README.md"
 categories = [ "science" ]
-keywords = [ "linear-algebra", "quantum-chemistry" ]
+keywords = [ "linear-algebra" ]
 license = "Apache-2.0"
 edition = "2018"
 
@@ -14,5 +14,5 @@ approx = "0.3.2"
 nalgebra = "0.18.1"
 
 [lib]
-name = "davidson"
+name = "eigenvalues"
 path = "src/lib.rs"
