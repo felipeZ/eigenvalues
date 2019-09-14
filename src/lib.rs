@@ -9,6 +9,7 @@ diagonalize symmetric matrices.
 
 pub mod algorithms;
 pub use algorithms::davidson::EigenDavidson;
+mod utils;
 
 #[cfg(test)]
 mod tests {
