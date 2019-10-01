@@ -8,8 +8,9 @@ diagonalize symmetric matrices.
 */
 
 pub mod algorithms;
-pub use algorithms::davidson::EigenDavidson;
+pub mod matrix_operations;
 pub mod utils;
+pub use algorithms::davidson::EigenDavidson;
 
 #[cfg(test)]
 mod tests {

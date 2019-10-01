@@ -21,7 +21,7 @@ Available correction methods are:
 extern crate nalgebra as na;
 use crate::utils;
 use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector, Dynamic};
+use na::{DMatrix, DVector, DVectorSlice, Dynamic};
 use std::f64;
 
 /// Structure containing the initial configuration data
@@ -69,8 +69,11 @@ impl EigenDavidson {
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
-        // 1. Select the initial ortogonal subspace based on lowest elements
+        // 1.1 Select the initial ortogonal subspace based on lowest elements
         let mut basis = generate_subspace(&h.diagonal(), conf.max_dim_sub);
+
+        // 1.2 Vector containing the indices of th converged and deflated eigenpairs
+        // let mut deflated = Vec::new();
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
@@ -101,6 +104,18 @@ impl EigenDavidson {
                 result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
                 break;
             }
+
+            // 4.4 Deflates the converged eigenvalues
+            // println!("Iter:{}", i);
+            // println!("errors:{}", errors);
+            // for (k, err) in errors.iter().enumerate() {
+            //     if (*err < conf.tolerance) & (!deflated.contains(&k)) {
+            //         println!("deflating:{}", k);
+            //         deflate_converged(&mut h, eig.eigenvalues[k], &eig.eigenvectors.column(k));
+            //         deflated.push(i);
+            //     }
+            // }
+
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
             if 2 * dim_sub <= conf.max_dim_sub {
@@ -125,6 +140,14 @@ impl EigenDavidson {
         }
         result
     }
+}
+
+/// Deflates the converged eigenvalue/eigenvector
+fn deflate_converged(h: &mut DMatrix<f64>, lambda: f64, vs: &DVectorSlice<f64>) {
+    let dim = h.nrows();
+    let xs = DVector::<f64>::from_iterator(dim, vs.iter().cloned());
+    let arr = lambda * xs.transpose() * xs;
+    h.zip_apply(&arr, |x, y| x - y);
 }
 
 /// Extract the requested eigenvalues/eigenvectors pairs
