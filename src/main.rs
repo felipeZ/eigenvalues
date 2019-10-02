@@ -4,7 +4,6 @@ extern crate nalgebra as na;
 use eigenvalues::algorithms::davidson::EigenDavidson;
 use na::{DMatrix, DVector};
 
-
 fn main() {
     let xs = 1..11;
     let dim = 10;
@@ -19,5 +18,4 @@ fn main() {
     let eig = EigenDavidson::new(brr, 2).unwrap();
     println!("eigenvalues:{}", eig.eigenvalues);
     println!("eigenvectors:{}", eig.eigenvectors);
-
 }

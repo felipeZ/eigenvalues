@@ -19,6 +19,7 @@ Available correction methods are:
 */
 
 extern crate nalgebra as na;
+use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector, DVectorSlice, Dynamic};
@@ -63,9 +64,9 @@ impl EigenDavidson {
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
 
-    pub fn new(h: DMatrix<f64>, nvalues: usize) -> Result<Self, &'static str> {
+    pub fn new<M: MatrixOperations>(h: M, nvalues: usize) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.nrows());
+        let conf = Config::new(nvalues, h.rows());
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
@@ -80,7 +81,7 @@ impl EigenDavidson {
         for i in 0..conf.max_iters {
             // 2. Generate subpace matrix problem by projecting into the basis
             let subspace = basis.columns(0, dim_sub);
-            let matrix_proj = subspace.transpose() * (&h * subspace);
+            let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace); // (&h * subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj));
@@ -187,45 +188,45 @@ fn orthogonalize_subspace(basis: DMatrix<f64>) -> DMatrix<f64> {
 }
 
 /// Residue vectors
-fn compute_residues(
-    h: &DMatrix<f64>,
+fn compute_residues<M: MatrixOperations>(
+    h: &M,
     eigenvalues: &DVector<f64>,
     ritz_vectors: &DMatrix<f64>,
 ) -> DMatrix<f64> {
     let dim_sub = eigenvalues.nrows();
-    let mut residues = DMatrix::<f64>::zeros(h.nrows(), dim_sub);
+    let mut residues = DMatrix::<f64>::zeros(h.rows(), dim_sub);
     for k in 0..dim_sub {
         let guess = eigenvalues[k] * ritz_vectors.column(k);
-        let vs = h * ritz_vectors.column(k);
+        let vs = h.matrix_vector_prod(ritz_vectors.column(k));
         residues.set_column(k, &(vs - guess));
     }
     residues
 }
 
 /// compute the correction vectors using either DPR or GJD
-fn compute_correction(
-    h: &DMatrix<f64>,
+fn compute_correction<M: MatrixOperations>(
+    h: &M,
     residues: DMatrix<f64>,
     eigenpairs: SymmetricEigen<f64, Dynamic>,
     method: &str,
 ) -> DMatrix<f64> {
     match method.to_uppercase().as_ref() {
-        "DPR" => compute_dpr_correction(&h, residues, &eigenpairs.eigenvalues),
-        "GJD" => compute_gjd_correction(&h, residues, &eigenpairs),
+        "DPR" => compute_dpr_correction(h, residues, &eigenpairs.eigenvalues),
+        "GJD" => compute_gjd_correction(h, residues, &eigenpairs),
         _ => panic!("Method {} has not been implemented", method),
     }
 }
 
 /// Use the Diagonal-Preconditioned-Residue (DPR) method to compute the correction
-fn compute_dpr_correction(
-    h: &DMatrix<f64>,
+fn compute_dpr_correction<M: MatrixOperations>(
+    h: &M,
     residues: DMatrix<f64>,
     eigenvalues: &DVector<f64>,
 ) -> DMatrix<f64> {
     let d = h.diagonal();
-    let mut correction = DMatrix::<f64>::zeros(h.nrows(), residues.ncols());
+    let mut correction = DMatrix::<f64>::zeros(h.rows(), residues.ncols());
     for (k, r) in eigenvalues.iter().enumerate() {
-        let rs = DVector::<f64>::repeat(h.nrows(), *r);
+        let rs = DVector::<f64>::repeat(h.rows(), *r);
         let x = residues.column(k).component_mul(&(rs - &d));
         correction.set_column(k, &x);
     }
@@ -233,29 +234,30 @@ fn compute_dpr_correction(
 }
 
 /// Use the Generalized Jacobi Davidson (GJD) to compute the correction
-fn compute_gjd_correction(
-    h: &DMatrix<f64>,
+fn compute_gjd_correction<M: MatrixOperations>(
+    h: &M,
     residues: DMatrix<f64>,
     eigenpairs: &SymmetricEigen<f64, Dynamic>,
 ) -> DMatrix<f64> {
-    let dimx = h.nrows();
-    let dimy = eigenpairs.eigenvalues.nrows();
-    let id = DMatrix::<f64>::identity(dimx, dimx);
-    let ones = DVector::<f64>::repeat(dimx, 1.0);
-    let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
-    for (k, r) in eigenpairs.eigenvalues.iter().enumerate() {
-        // Create the components of the linear system
-        let x = eigenpairs.eigenvectors.column(k);
-        let t1 = &id - x * x.transpose();
-        let mut t2 = h.clone();
-        t2.set_diagonal(&(*r * &ones));
-        let arr = &t1 * t2 * &t1;
-        // Solve the linear system
-        let decomp = arr.lu();
-        let mut b = -residues.column(k);
-        decomp.solve_mut(&mut b);
-        correction.set_column(k, &b);
-    }
+    // let dimx = h.rows();
+    // let dimy = eigenpairs.eigenvalues.nrows();
+    // let id = DMatrix::<f64>::identity(dimx, dimx);
+    // let ones = DVector::<f64>::repeat(dimx, 1.0);
+    // let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
+    // for (k, r) in eigenpairs.eigenvalues.iter().enumerate() {
+    //     // Create the components of the linear system
+    //     let x = eigenpairs.eigenvectors.column(k);
+    //     let t1 = &id - x * x.transpose();
+    //     let mut t2 = h.clone();
+    //     t2.set_diagonal(&(*r * &ones));
+    //     let arr = &t1 * t2 * &t1;
+    //     // Solve the linear system
+    //     let decomp = arr.lu();
+    //     let mut b = -residues.column(k);
+    //     decomp.solve_mut(&mut b);
+    //     correction.set_column(k, &b);
+    // }
+    let correction = DMatrix::<f64>::zeros(2, 2);
     correction
 }
 
