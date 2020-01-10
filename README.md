@@ -1,3 +1,5 @@
+![](https://github.com/felipez/eigenvalues/workflows/rust/badge.svg)
+
 Eigenvalue Decomposition
 ========================
 This package contains some implementations for computing the eigenvalues of a symmetric matrix,
