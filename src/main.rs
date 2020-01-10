@@ -1,7 +1,7 @@
 extern crate eigenvalues;
 extern crate nalgebra as na;
 
-use eigenvalues::algorithms::davidson::EigenDavidson;
+use eigenvalues::davidson::EigenDavidson;
 use na::{DMatrix, DVector};
 
 fn main() {

@@ -10,7 +10,7 @@ diagonalize symmetric matrices.
 pub mod algorithms;
 pub mod matrix_operations;
 pub mod utils;
-pub use algorithms::davidson::EigenDavidson;
+pub use algorithms::davidson;
 
 #[cfg(test)]
 mod tests {

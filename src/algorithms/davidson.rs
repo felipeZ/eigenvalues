@@ -30,7 +30,7 @@ struct Config {
     method: String,
     tolerance: f64,
     max_iters: usize,
-    max_dim_sub: usize,
+    max_search_space: usize,
     init_dim: usize,
 }
 impl Config {
@@ -38,7 +38,7 @@ impl Config {
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
     /// * `dim` - dimension of the matrix to diagonalize
     fn new(nvalues: usize, dim: usize) -> Self {
-        let max_dim_sub = if nvalues * 10 < dim {
+        let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
             dim
@@ -47,7 +47,7 @@ impl Config {
             method: String::from("DPR"),
             tolerance: 1e-8,
             max_iters: 100,
-            max_dim_sub: max_dim_sub,
+            max_search_space: max_search_space,
             init_dim: nvalues * 2,
         }
     }
@@ -71,7 +71,7 @@ impl EigenDavidson {
         // Initial subpace
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
-        let mut basis = generate_subspace(&h.diagonal(), conf.max_dim_sub);
+        let mut basis = generate_subspace(&h.diagonal(), conf.max_search_space);
 
         // 1.2 Vector containing the indices of th converged and deflated eigenpairs
         // let mut deflated = Vec::new();
@@ -119,7 +119,7 @@ impl EigenDavidson {
 
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if 2 * dim_sub <= conf.max_dim_sub {
+            if 2 * dim_sub <= conf.max_search_space {
                 let correction = compute_correction(&h, residues, eig, &conf.method);
                 update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
@@ -262,9 +262,9 @@ fn compute_gjd_correction<M: MatrixOperations>(
 }
 
 /// Generate initial orthonormal subspace
-fn generate_subspace(diag: &DVector<f64>, max_dim_sub: usize) -> DMatrix<f64> {
+fn generate_subspace(diag: &DVector<f64>, max_search_space: usize) -> DMatrix<f64> {
     if is_sorted(diag) {
-        DMatrix::<f64>::identity(diag.nrows(), max_dim_sub)
+        DMatrix::<f64>::identity(diag.nrows(), max_search_space)
     } else {
         // TODO implement the case when the diagonal is not sorted
         panic!("Matrix diagonal elements are not sorted")
