@@ -293,5 +293,4 @@ mod test {
         assert_eq!(arr.column(1).sum(), 0.);
         assert_eq!(arr.column(2).sum(), 3.);
     }
-
 }

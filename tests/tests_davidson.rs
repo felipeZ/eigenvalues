@@ -14,13 +14,17 @@ fn davidson_eigenvalues() {
     let dav_eig = EigenDavidson::new(arr, 2).unwrap();
     for i in 0..2 {
         // Test Eigenvalues
-        relative_eq!(eig.eigenvalues[i], dav_eig.eigenvalues[i]);
+        assert!(relative_eq!(
+            eig.eigenvalues[i],
+            dav_eig.eigenvalues[i],
+            epsilon = 1e-8
+        ));
         // Test Eigenvectors
         let x = eig.eigenvectors.column(i);
         let y = dav_eig.eigenvectors.column(i);
         // The autovectors may different in their sign
         // They should be either parallel or antiparallel
         let dot = x.dot(&y).abs();
-        relative_eq!(dot, 1.0);
+        assert!(relative_eq!(dot, 1.0, epsilon = 1e-8));
     }
 }
