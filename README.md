@@ -1,4 +1,4 @@
-![](https://github.com/felipez/eigenvalues/workflows/rust/badge.svg)
+[![Build Status](https://github.com/felipez/eigenvalues/workflows/rust/badge.svg)](https://github.com/felipeZ/eigenvalues/actions)
 
 Eigenvalue Decomposition
 ========================
