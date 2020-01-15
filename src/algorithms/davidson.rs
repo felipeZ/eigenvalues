@@ -45,7 +45,7 @@ impl Config {
         };
         Config {
             method: String::from("DPR"),
-            tolerance: 1e-8,
+            tolerance: 1e-6,
             max_iters: 100,
             max_search_space: max_search_space,
             init_dim: nvalues * 2,
@@ -72,9 +72,6 @@ impl EigenDavidson {
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
         let mut basis = generate_subspace(&h.diagonal(), conf.max_search_space);
-
-        // 1.2 Vector containing the indices of th converged and deflated eigenpairs
-        // let mut deflated = Vec::new();
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
@@ -106,17 +103,6 @@ impl EigenDavidson {
                 break;
             }
 
-            // 4.4 Deflates the converged eigenvalues
-            // println!("Iter:{}", i);
-            // println!("errors:{}", errors);
-            // for (k, err) in errors.iter().enumerate() {
-            //     if (*err < conf.tolerance) & (!deflated.contains(&k)) {
-            //         println!("deflating:{}", k);
-            //         deflate_converged(&mut h, eig.eigenvalues[k], &eig.eigenvectors.column(k));
-            //         deflated.push(i);
-            //     }
-            // }
-
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
             if 2 * dim_sub <= conf.max_search_space {
@@ -141,14 +127,6 @@ impl EigenDavidson {
         }
         result
     }
-}
-
-/// Deflates the converged eigenvalue/eigenvector
-fn deflate_converged(h: &mut DMatrix<f64>, lambda: f64, vs: &DVectorSlice<f64>) {
-    let dim = h.nrows();
-    let xs = DVector::<f64>::from_iterator(dim, vs.iter().cloned());
-    let arr = lambda * xs.transpose() * xs;
-    h.zip_apply(&arr, |x, y| x - y);
 }
 
 /// Extract the requested eigenvalues/eigenvectors pairs
