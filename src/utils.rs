@@ -1,3 +1,9 @@
+/*!
+
+## Auxiliar functions to manipulate arrays
+
+ */
+
 extern crate nalgebra as na;
 use na::linalg::SymmetricEigen;
 use na::Dynamic;
