@@ -12,6 +12,7 @@ pub trait MatrixOperations {
     fn matrix_vector_prod(&self, vs: DVectorSlice<f64>) -> DVector<f64>;
     fn matrix_matrix_prod(&self, mtx: DMatrixSlice<f64>) -> DMatrix<f64>;
     fn diagonal(&self) -> DVector<f64>;
+    fn set_diagonal(&mut self, diag: &DVector<f64>);
     fn cols(&self) -> usize;
     fn rows(&self) -> usize;
 }
@@ -26,6 +27,10 @@ impl MatrixOperations for DMatrix<f64> {
     fn diagonal(&self) -> DVector<f64> {
         self.diagonal()
     }
+    fn set_diagonal(&mut self, diag: &DVector<f64>) {
+        self.set_diagonal(diag);
+    }
+
     fn cols(&self) -> usize {
         self.ncols()
     }
