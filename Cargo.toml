@@ -2,8 +2,9 @@
 name = "eigenvalues"
 version = "0.1.0"
 authors = ["felipe <tifonzafel@gmail.com>"]
-description = "algorithms to diagonalize symmetric matrices"
+description = "algorithms to compute eigenvalue/eigenvectors of symmetric matrices"
 readme = "README.md"
+repository = "https://github.com/felipeZ/eigenvalues"
 categories = [ "science" ]
 keywords = [ "linear-algebra", "eigenvalues" ]
 license = "Apache-2.0"
