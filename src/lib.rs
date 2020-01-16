@@ -17,8 +17,8 @@ use na::{DMatrix, DVector};
 // Generate random symmetric matrix
 let brr = eigenvalues::utils::generate_diagonal_dominant(10, 0.005);
 
-// Compute the first 2 eigenvalues/eigenvectors
-let eig = EigenDavidson::new (brr, 2).unwrap();
+// Compute the first 2 eigenvalues/eigenvectors using the DPR method
+let eig = EigenDavidson::new (brr, 2, "DPR").unwrap();
 println!("eigenvalues:{}", eig.eigenvalues);
 println!("eigenvectors:{}", eig.eigenvectors);
 ```

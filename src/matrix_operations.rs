@@ -15,6 +15,7 @@ pub trait MatrixOperations {
     fn set_diagonal(&mut self, diag: &DVector<f64>);
     fn cols(&self) -> usize;
     fn rows(&self) -> usize;
+    fn clone(&self) -> Self;
 }
 
 impl MatrixOperations for DMatrix<f64> {
@@ -36,5 +37,8 @@ impl MatrixOperations for DMatrix<f64> {
     }
     fn rows(&self) -> usize {
         self.nrows()
+    }
+    fn clone(&self) -> DMatrix<f64> {
+        std::clone::Clone::clone(&self)
     }
 }

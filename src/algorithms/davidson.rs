@@ -3,14 +3,14 @@
 # Davidson Diagonalization
 
 The Davidson method is suitable for diagonal-dominant symmetric matrices,
-that are quite common in certain scientific problems like [electronic structure](https://en.wikipedia.org/wiki/Electronic_structure).
-The Davidson method could be not practical for other kind of symmetric matrices.
+that are quite common in certain scientific problems like [electronic
+structure](https://en.wikipedia.org/wiki/Electronic_structure). The Davidson
+method could be not practical for other kind of symmetric matrices.
 
 The current implementation uses a general davidson algorithm, meaning
-that it compute all the requested eigenvalues simultaneusly using a variable size
- block approach.
-The family of Davidson algorithm only differ in the way that the correction
-vector is computed.
+that it compute all the requested eigenvalues simultaneusly using a variable
+size block approach. The family of Davidson algorithm only differ in the way
+that the correction vector is computed.
 
 Available correction methods are:
  * **DPR**: Diagonal-Preconditioned-Residue
@@ -22,8 +22,9 @@ extern crate nalgebra as na;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector, DVectorSlice, Dynamic};
+use na::{DMatrix, DVector};
 use std::f64;
+use std::ops::Not;
 
 /// Structure containing the initial configuration data
 struct Config {
@@ -37,14 +38,23 @@ impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
     /// * `dim` - dimension of the matrix to diagonalize
-    fn new(nvalues: usize, dim: usize) -> Self {
+    fn new(nvalues: usize, dim: usize, method: &str) -> Self {
         let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
             dim
         };
+	// Check that the correction method requested by the user is available
+        let available_methods = ["DPR", "GJD"];
+        if available_methods
+            .iter()
+            .any(|&x| x == method.to_uppercase())
+            .not()
+        {
+            panic!("Method {} is not available!", method);
+        }
         Config {
-            method: String::from("DPR"),
+            method: String::from(method),
             tolerance: 1e-6,
             max_iters: 100,
             max_search_space: max_search_space,
@@ -64,14 +74,21 @@ impl EigenDavidson {
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
 
-    pub fn new<M: MatrixOperations>(h: M, nvalues: usize) -> Result<Self, &'static str> {
+    pub fn new<M: MatrixOperations>(
+        h: M,
+        nvalues: usize,
+        method: &str,
+    ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows());
+        let conf = Config::new(nvalues, h.rows(), method);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
         let mut basis = generate_subspace(&h.diagonal(), conf.max_search_space);
+
+        // 1.2 Select the correction to use
+        let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
@@ -106,7 +123,8 @@ impl EigenDavidson {
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
             if 2 * dim_sub <= conf.max_search_space {
-                let correction = compute_correction(&h, residues, eig, &conf.method);
+                let correction =
+                    corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
                 update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
 
                 // 6. Orthogonalize the subspace
@@ -114,7 +132,8 @@ impl EigenDavidson {
                 // update counter
                 dim_sub *= 2;
 
-            // 5.2 Otherwise reduce the basis of the subspace to the current correction
+            // 5.2 Otherwise reduce the basis of the subspace to the current
+            // correction
             } else {
                 dim_sub = conf.init_dim;
                 basis.fill(0.0);
@@ -150,6 +169,86 @@ fn create_results(
     }
 }
 
+/// Structure containing the correction methods
+struct CorrectionMethod<'a, M>
+where
+    M: MatrixOperations,
+{
+    /// The initial target matrix
+    target: &'a M,
+    /// Method used to compute the correction
+    method: String,
+}
+
+impl<'a, M> CorrectionMethod<'a, M>
+where
+    M: MatrixOperations,
+{
+    fn new(target: &'a M, method: &str) -> CorrectionMethod<'a, M> {
+        CorrectionMethod {
+            target: target,
+            method: String::from(method),
+        }
+    }
+
+    /// compute the correction vectors using either DPR or GJD
+    fn compute_correction(
+        &self,
+        residues: DMatrix<f64>,
+        eigenvalues: &DVector<f64>,
+        ritz_vectors: &DMatrix<f64>,
+    ) -> DMatrix<f64> {
+        match self.method.to_uppercase().as_ref() {
+            "DPR" => self.compute_dpr_correction(residues, eigenvalues),
+            "GJD" => self.compute_gjd_correction(residues, eigenvalues, ritz_vectors),
+            _ => panic!("Method {} has not been implemented", self.method),
+        }
+    }
+
+    /// Use the Diagonal-Preconditioned-Residue (DPR) method to compute the correction
+    fn compute_dpr_correction(
+        &self,
+        residues: DMatrix<f64>,
+        eigenvalues: &DVector<f64>,
+    ) -> DMatrix<f64> {
+        let d = self.target.diagonal();
+        let mut correction = DMatrix::<f64>::zeros(self.target.rows(), residues.ncols());
+        for (k, r) in eigenvalues.iter().enumerate() {
+            let rs = DVector::<f64>::repeat(self.target.rows(), *r);
+            let x = residues.column(k).component_mul(&(rs - &d));
+            correction.set_column(k, &x);
+        }
+        correction
+    }
+
+    /// Use the Generalized Jacobi Davidson (GJD) to compute the correction
+    fn compute_gjd_correction(
+        &self,
+        residues: DMatrix<f64>,
+        eigenvalues: &DVector<f64>,
+        ritz_vectors: &DMatrix<f64>,
+    ) -> DMatrix<f64> {
+        let dimx = self.target.rows();
+        let dimy = residues.ncols();
+        let id = DMatrix::<f64>::identity(dimx, dimx);
+        let ones = DVector::<f64>::repeat(dimx, 1.0);
+        let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
+        for (k, r) in ritz_vectors.column_iter().enumerate() {
+            // Create the components of the linear system
+            let t1 = &id - r * r.transpose();
+            let mut t2 = self.target.clone();
+            t2.set_diagonal(&(eigenvalues[k] * &ones));
+            let arr = &t1 * &t2.matrix_matrix_prod(t1.rows(0, dimx));
+            // Solve the linear system
+            let decomp = arr.lu();
+            let mut b = -residues.column(k);
+            decomp.solve_mut(&mut b);
+            correction.set_column(k, &b);
+        }
+        correction
+    }
+}
+
 /// Update the subpace with new vectors
 fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize, end: usize) {
     let mut i = 0; // indices for the new vector to add
@@ -179,64 +278,6 @@ fn compute_residues<M: MatrixOperations>(
         residues.set_column(k, &(vs - guess));
     }
     residues
-}
-
-/// compute the correction vectors using either DPR or GJD
-fn compute_correction<M: MatrixOperations>(
-    h: &M,
-    residues: DMatrix<f64>,
-    eigenpairs: SymmetricEigen<f64, Dynamic>,
-    method: &str,
-) -> DMatrix<f64> {
-    match method.to_uppercase().as_ref() {
-        "DPR" => compute_dpr_correction(h, residues, &eigenpairs.eigenvalues),
-        "GJD" => compute_gjd_correction(h, residues, &eigenpairs),
-        _ => panic!("Method {} has not been implemented", method),
-    }
-}
-
-/// Use the Diagonal-Preconditioned-Residue (DPR) method to compute the correction
-fn compute_dpr_correction<M: MatrixOperations>(
-    h: &M,
-    residues: DMatrix<f64>,
-    eigenvalues: &DVector<f64>,
-) -> DMatrix<f64> {
-    let d = h.diagonal();
-    let mut correction = DMatrix::<f64>::zeros(h.rows(), residues.ncols());
-    for (k, r) in eigenvalues.iter().enumerate() {
-        let rs = DVector::<f64>::repeat(h.rows(), *r);
-        let x = residues.column(k).component_mul(&(rs - &d));
-        correction.set_column(k, &x);
-    }
-    correction
-}
-
-/// Use the Generalized Jacobi Davidson (GJD) to compute the correction
-fn compute_gjd_correction<M: MatrixOperations>(
-    h: &M,
-    residues: DMatrix<f64>,
-    eigenpairs: &SymmetricEigen<f64, Dynamic>,
-) -> DMatrix<f64> {
-    // let dimx = h.rows();
-    // let dimy = eigenpairs.eigenvalues.nrows();
-    // let id = DMatrix::<f64>::identity(dimx, dimx);
-    // let ones = DVector::<f64>::repeat(dimx, 1.0);
-    // let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
-    // for (k, r) in eigenpairs.eigenvalues.iter().enumerate() {
-    //     // Create the components of the linear system
-    //     let x = eigenpairs.eigenvectors.column(k);
-    //     let t1 = &id - x * x.transpose();
-    //     let mut t2 = h.clone();
-    //     t2.set_diagonal(&(*r * &ones));
-    //     let arr = &t1 * t2 * &t1;
-    //     // Solve the linear system
-    //     let decomp = arr.lu();
-    //     let mut b = -residues.column(k);
-    //     decomp.solve_mut(&mut b);
-    //     correction.set_column(k, &b);
-    // }
-    let correction = DMatrix::<f64>::zeros(2, 2);
-    correction
 }
 
 /// Generate initial orthonormal subspace
