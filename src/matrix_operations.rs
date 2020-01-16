@@ -6,16 +6,16 @@
 */
 extern crate nalgebra as na;
 use na::{DMatrix, DMatrixSlice, DVector, DVectorSlice};
+use std::clone::Clone;
 
 /// Trait containing the matrix free operations
-pub trait MatrixOperations {
+pub trait MatrixOperations: Clone  {
     fn matrix_vector_prod(&self, vs: DVectorSlice<f64>) -> DVector<f64>;
     fn matrix_matrix_prod(&self, mtx: DMatrixSlice<f64>) -> DMatrix<f64>;
     fn diagonal(&self) -> DVector<f64>;
     fn set_diagonal(&mut self, diag: &DVector<f64>);
     fn cols(&self) -> usize;
     fn rows(&self) -> usize;
-    fn clone(&self) -> Self;
 }
 
 impl MatrixOperations for DMatrix<f64> {
@@ -38,7 +38,6 @@ impl MatrixOperations for DMatrix<f64> {
     fn rows(&self) -> usize {
         self.nrows()
     }
-    fn clone(&self) -> DMatrix<f64> {
-        std::clone::Clone::clone(&self)
-    }
 }
+
+

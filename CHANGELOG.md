@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.1.1] 16-01-2020
+
+### Changed
+* Declared **Clone** a [Super Trait](https://doc.rust-lang.org/reference/items/traits.html#supertraits) **Matrixoperations**.
+
 ## [0.1.0] 16-01-2020
 
 ### Added
