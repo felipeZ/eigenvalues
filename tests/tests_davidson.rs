@@ -11,16 +11,23 @@ use eigenvalues::utils::sort_eigenpairs;
 fn davidson_eigenvalues() {
     let arr = generate_diagonal_dominant(10, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()));
-    let dav_eig = EigenDavidson::new(arr, 2).unwrap();
-    for i in 0..2 {
+    
+    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR").unwrap();
+    test_eigenpairs(&eig, dav_eig, 2);
+    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD").unwrap();
+    test_eigenpairs(&eig, dav_eig, 2);
+}
+
+fn test_eigenpairs(reference: &na::linalg::SymmetricEigen<f64, na::Dynamic>, dav_eig: EigenDavidson, number: usize) {
+    for i in 0..number {
         // Test Eigenvalues
         assert!(relative_eq!(
-            eig.eigenvalues[i],
+            reference.eigenvalues[i],
             dav_eig.eigenvalues[i],
             epsilon = 1e-8
         ));
         // Test Eigenvectors
-        let x = eig.eigenvectors.column(i);
+        let x = reference.eigenvectors.column(i);
         let y = dav_eig.eigenvectors.column(i);
         // The autovectors may different in their sign
         // They should be either parallel or antiparallel

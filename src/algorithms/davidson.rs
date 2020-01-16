@@ -302,7 +302,7 @@ fn is_sorted(xs: &DVector<f64>) -> bool {
 #[cfg(test)]
 mod test {
     extern crate nalgebra as na;
-    use na::{DMatrix, DVector};
+    use na::DMatrix;
 
     #[test]
     fn test_update_subspace() {
