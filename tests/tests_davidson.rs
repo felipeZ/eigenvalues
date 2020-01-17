@@ -10,7 +10,7 @@ use eigenvalues::utils::sort_eigenpairs;
 #[test]
 fn davidson_eigenvalues() {
     let arr = generate_diagonal_dominant(10, 0.005);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()));
+    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
 
     let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR").unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
@@ -23,7 +23,7 @@ fn test_davidson_unsorted() {
     let mut arr = generate_diagonal_dominant(5, 0.005);
     let vs = na::DVector::<f64>::from_vec(vec!(3.0, 2.0, 4.0, 1.0, 5.0));
     arr.set_diagonal(&vs);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()));
+    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
     let dav_eig = EigenDavidson::new(arr, 1, "DPR").unwrap();
     test_eigenpairs(&eig, dav_eig, 1);
 }

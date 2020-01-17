@@ -26,9 +26,18 @@ use na::{DMatrix, DVector};
 use std::f64;
 use std::ops::Not;
 
+/// Option to compute the lowest, highest or somewhere in the middle part of the
+/// spectrum
+pub enum SpectrumTarget {
+    Lowest,
+    Highest,
+    Target(f64),
+}
+
 /// Structure containing the initial configuration data
 struct Config {
     method: String,
+    spectrum_target: SpectrumTarget,
     tolerance: f64,
     max_iters: usize,
     max_search_space: usize,
@@ -38,7 +47,7 @@ impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
     /// * `dim` - dimension of the matrix to diagonalize
-    fn new(nvalues: usize, dim: usize, method: &str) -> Self {
+    fn new(nvalues: usize, dim: usize, method: &str, target: Option<SpectrumTarget>) -> Self {
         let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
@@ -55,6 +64,7 @@ impl Config {
         }
         Config {
             method: String::from(method),
+            spectrum_target: target.unwrap_or_else(|| SpectrumTarget::Lowest),
             tolerance: 1e-6,
             max_iters: 100,
             max_search_space: max_search_space,
@@ -80,12 +90,12 @@ impl EigenDavidson {
         method: &str,
     ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows(), method);
+        let conf = Config::new(nvalues, h.rows(), method, None);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
-        let mut basis = generate_subspace(&h.diagonal(), conf.max_search_space);
+        let mut basis = generate_subspace(&h.diagonal(), &conf);
 
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
@@ -98,7 +108,7 @@ impl EigenDavidson {
             let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace); // (&h * subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
-            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj));
+            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj), true);
 
             // 4. Check for convergence
             // 4.1 Compute the residues
@@ -281,20 +291,27 @@ fn compute_residues<M: MatrixOperations>(
 }
 
 /// Generate initial orthonormal subspace
-fn generate_subspace(diag: &DVector<f64>, max_search_space: usize) -> DMatrix<f64> {
+fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
     if is_sorted(diag) {
-        DMatrix::<f64>::identity(diag.nrows(), max_search_space)
+        DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
+    // If the diagonal is not sorted
     } else {
         let xs = diag.as_slice().to_vec();
         let mut rs = xs.clone();
-        rs.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let mut mtx = na::DMatrix::<f64>::zeros(5, 5);
-        for i in 0..5 {
+
+        match conf.spectrum_target {
+            SpectrumTarget::Lowest => utils::sort_vector(&mut rs, true),
+            SpectrumTarget::Highest => utils::sort_vector(&mut rs, false),
+            _ => panic!("Not implemented error!"),
+        }
+
+        // update the matrix according to the spectrumtarget
+        let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
+        for i in 0..conf.max_search_space {
             let index = rs.iter().position(|&x| x == xs[i]).unwrap();
             mtx[(i, index)] = 1.0;
-	    
         }
-	mtx
+        mtx
     }
 }
 

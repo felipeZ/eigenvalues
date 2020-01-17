@@ -22,7 +22,10 @@ pub fn generate_diagonal_dominant(dim: usize, sparsity: f64) -> DMatrix<f64> {
 }
 
 /// Sort the eigenvalues and their corresponding eigenvectors in ascending order
-pub fn sort_eigenpairs(eig: SymmetricEigen<f64, Dynamic>) -> SymmetricEigen<f64, Dynamic> {
+pub fn sort_eigenpairs(
+    eig: SymmetricEigen<f64, Dynamic>,
+    ascending: bool,
+) -> SymmetricEigen<f64, Dynamic> {
     // Sort the eigenvalues
     let mut vs: Vec<(f64, usize)> = eig
         .eigenvalues
@@ -30,7 +33,7 @@ pub fn sort_eigenpairs(eig: SymmetricEigen<f64, Dynamic>) -> SymmetricEigen<f64,
         .enumerate()
         .map(|(idx, &x)| (x, idx))
         .collect();
-    vs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    sort_vector(&mut vs, ascending);
 
     // Sorted eigenvalues
     let eigenvalues = DVector::<f64>::from_iterator(vs.len(), vs.iter().map(|t| t.0));
@@ -49,5 +52,13 @@ pub fn sort_eigenpairs(eig: SymmetricEigen<f64, Dynamic>) -> SymmetricEigen<f64,
     SymmetricEigen {
         eigenvalues,
         eigenvectors,
+    }
+}
+
+pub fn sort_vector<T: PartialOrd>(vs: &mut Vec<T>, ascending: bool) {
+    if ascending {
+        vs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    } else {
+        vs.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap());
     }
 }

@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+## [0.1.3] 17-01-2020
+
+### Fixed
+* Fixed bug generating the subpsace when the diagonal is not sorted.
+
+### Added
+
 ## [0.1.2] 17-01-2020
 
 ### Added
