@@ -6,6 +6,8 @@
 * Fixed bug generating the subpsace when the diagonal is not sorted.
 
 ### Added
+* Allow to compute the lowest or highest eigenvalues of the spectrum.
+
 
 ## [0.1.2] 17-01-2020
 

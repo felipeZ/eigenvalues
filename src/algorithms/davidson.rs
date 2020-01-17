@@ -19,20 +19,13 @@ Available correction methods are:
 */
 
 extern crate nalgebra as na;
+use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector};
 use std::f64;
 use std::ops::Not;
-
-/// Option to compute the lowest, highest or somewhere in the middle part of the
-/// spectrum
-pub enum SpectrumTarget {
-    Lowest,
-    Highest,
-    Target(f64),
-}
 
 /// Structure containing the initial configuration data
 struct Config {
@@ -88,9 +81,10 @@ impl EigenDavidson {
         h: M,
         nvalues: usize,
         method: &str,
+        spectrum_target: Option<SpectrumTarget>,
     ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows(), method, None);
+        let conf = Config::new(nvalues, h.rows(), method, spectrum_target);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
@@ -108,7 +102,11 @@ impl EigenDavidson {
             let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace); // (&h * subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
-            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj), true);
+            let ord_sort = match conf.spectrum_target {
+                SpectrumTarget::Highest => false,
+                _ => true,
+            };
+            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj), ord_sort);
 
             // 4. Check for convergence
             // 4.1 Compute the residues
@@ -294,7 +292,6 @@ fn compute_residues<M: MatrixOperations>(
 fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
     if is_sorted(diag) {
         DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
-    // If the diagonal is not sorted
     } else {
         let xs = diag.as_slice().to_vec();
         let mut rs = xs.clone();

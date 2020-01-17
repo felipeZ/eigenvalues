@@ -4,3 +4,12 @@
 
 */
 pub mod davidson;
+
+/// Option to compute the lowest, highest or somewhere in the middle part of the
+/// spectrum
+#[derive(Clone)]
+pub enum SpectrumTarget {
+    Lowest,
+    Highest,
+    Target(f64),
+}
