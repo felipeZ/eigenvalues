@@ -6,15 +6,18 @@ use approx::relative_eq;
 use eigenvalues::algorithms::davidson::EigenDavidson;
 use eigenvalues::utils::generate_diagonal_dominant;
 use eigenvalues::utils::sort_eigenpairs;
+use eigenvalues::SpectrumTarget;
 
 #[test]
-fn davidson_eigenvalues() {
+fn test_davidson_lowest() {
     let arr = generate_diagonal_dominant(10, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
 
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", None).unwrap();
+    let spectrum_target = SpectrumTarget::Lowest;
+
+    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", spectrum_target.clone()).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", None).unwrap();
+    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", spectrum_target).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
 }
 
@@ -25,7 +28,7 @@ fn test_davidson_unsorted() {
     let vs = na::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
     arr.set_diagonal(&vs);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
-    let dav_eig = EigenDavidson::new(arr, 1, "DPR", None).unwrap();
+    let dav_eig = EigenDavidson::new(arr, 1, "DPR", SpectrumTarget::Lowest).unwrap();
     test_eigenpairs(&eig, dav_eig, 1);
 }
 
@@ -35,7 +38,7 @@ fn test_davidson_highest() {
     let arr = generate_diagonal_dominant(10, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), false);
 
-    let target = Some(eigenvalues::SpectrumTarget::Highest);
+    let target = SpectrumTarget::Highest;
 
     let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", target.clone()).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);

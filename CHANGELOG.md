@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+## [0.1.4]
+
+### Changed
+
+* The Davidson method requires a **SpectrumTarget** `enum` argument.
+
 ## [0.1.3] 17-01-2020
 
 ### Fixed

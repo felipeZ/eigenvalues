@@ -40,7 +40,9 @@ impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
     /// * `nvalues` - Number of eigenvalue/eigenvector pairs to compute
     /// * `dim` - dimension of the matrix to diagonalize
-    fn new(nvalues: usize, dim: usize, method: &str, target: Option<SpectrumTarget>) -> Self {
+    /// * `method` - Either DPR or GJD
+    /// * `target` Lowest, highest or somewhere in the middle portion of the spectrum
+    fn new(nvalues: usize, dim: usize, method: &str, target: SpectrumTarget) -> Self {
         let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
@@ -57,7 +59,7 @@ impl Config {
         }
         Config {
             method: String::from(method),
-            spectrum_target: target.unwrap_or_else(|| SpectrumTarget::Lowest),
+            spectrum_target: target,
             tolerance: 1e-6,
             max_iters: 100,
             max_search_space: max_search_space,
@@ -81,7 +83,7 @@ impl EigenDavidson {
         h: M,
         nvalues: usize,
         method: &str,
-        spectrum_target: Option<SpectrumTarget>,
+        spectrum_target: SpectrumTarget,
     ) -> Result<Self, &'static str> {
         // Initial configuration
         let conf = Config::new(nvalues, h.rows(), method, spectrum_target);
