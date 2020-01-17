@@ -1,5 +1,10 @@
 ## [Unreleased]
 
+## [0.1.2] 17-01-2020
+
+### Added
+* Generate the orthonormal subspace different from the identity matrix when the diagonal values are not sorted.
+
 ## [0.1.1] 16-01-2020
 
 ### Changed

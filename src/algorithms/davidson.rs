@@ -44,7 +44,7 @@ impl Config {
         } else {
             dim
         };
-	// Check that the correction method requested by the user is available
+        // Check that the correction method requested by the user is available
         let available_methods = ["DPR", "GJD"];
         if available_methods
             .iter()
@@ -285,8 +285,16 @@ fn generate_subspace(diag: &DVector<f64>, max_search_space: usize) -> DMatrix<f6
     if is_sorted(diag) {
         DMatrix::<f64>::identity(diag.nrows(), max_search_space)
     } else {
-        // TODO implement the case when the diagonal is not sorted
-        panic!("Matrix diagonal elements are not sorted")
+        let xs = diag.as_slice().to_vec();
+        let mut rs = xs.clone();
+        rs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let mut mtx = na::DMatrix::<f64>::zeros(5, 5);
+        for i in 0..5 {
+            let index = rs.iter().position(|&x| x == xs[i]).unwrap();
+            mtx[(i, index)] = 1.0;
+	    
+        }
+	mtx
     }
 }
 

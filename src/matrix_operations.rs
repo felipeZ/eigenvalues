@@ -2,6 +2,10 @@
 
 ## Common matrix operations for all the matrix representations.
 
+### Other matrix representations
+Currently the algorithms are implemented for the `nalgebra` **DMatrix** type.
+You can use the algorithms for other matrix representations (e.g. matrix-free)
+by providing your own implementation of the **Matrixoperations** trait.
 
 */
 extern crate nalgebra as na;
