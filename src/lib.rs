@@ -33,5 +33,7 @@ println!("eigenvectors:{}", eig.eigenvectors);
 
 pub mod algorithms;
 pub mod matrix_operations;
+pub mod modified_gram_schmidt;
 pub mod utils;
 pub use algorithms::{davidson, SpectrumTarget};
+pub use modified_gram_schmidt::{MGS};
