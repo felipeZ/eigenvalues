@@ -16,19 +16,13 @@ pub struct MGS {
 }
 
 impl MGS {
-    /// The new static method takes a single argument:
+    /// The new static method takes three argument:
     /// * `vectors` to diagonalize as columns of the matrix
-    pub fn new(vectors: DMatrix<f64>) -> Result<Self, &'static str> {
-        if !vectors.is_square() {
-            return Err("vectors must be an square matrix");
-        }
-        let dim = vectors.nrows();
-        let mut basis = DMatrix::<f64>::zeros(dim, dim);
-        // first vector of the basis
-        let first = vectors.column(0) / vectors.column(0).norm();
-        basis.set_column(0, &first);
-        // Iterate over the rest of the columns
-        for i in 1..basis.ncols() {
+    /// * `start` index of the column to start orthogonalizing
+    /// * `end` last index of the column to diagonalize (non-inclusive)
+    pub fn new(vectors: DMatrix<f64>, start: usize, end: usize) -> Result<Self, &'static str> {
+        let mut basis = vectors.clone();
+        for i in start..end {
             basis.set_column(i, &vectors.column(i));
             for j in 0..i {
                 let proj = MGS::project(&basis.column(j), &basis.column(i));
@@ -55,12 +49,22 @@ mod test {
     fn test_gram_schmidt() {
         let dim = 10;
         let vectors = DMatrix::<f64>::new_random(dim, dim);
-        let mgs_result = super::MGS::new(vectors);
-        let basis: DMatrix<f64> = match mgs_result {
+        fun_test(vectors, 0);
+    }
+
+    #[test]
+    fn test_start_gram_schmidt() {
+        let arr = DMatrix::<f64>::from_vec(3, 3, vec![1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 2.0]);
+        fun_test(arr, 1);
+    }
+
+    fn fun_test(vectors: DMatrix<f64>, start: usize) {
+        let end = vectors.ncols();
+        let mgs_result = super::MGS::new(vectors, start, end);
+        let basis = match mgs_result {
             Ok(ortho) => ortho.basis,
             Err(message) => panic!(message),
         };
-
         let result = basis.transpose() * &basis;
         assert!(result.is_identity(1e-8));
     }

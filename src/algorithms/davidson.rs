@@ -129,7 +129,6 @@ impl EigenDavidson {
                 result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
                 break;
             }
-
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
             if dim_sub + nvalues <= conf.max_search_space {
@@ -138,7 +137,8 @@ impl EigenDavidson {
                 update_subspace(&mut basis, correction, dim_sub, dim_sub + nvalues);
 
                 // 6. Orthogonalize the subspace
-                basis = orthogonalize_subspace(basis);
+                basis = orthogonalize_subspace(basis, dim_sub, dim_sub + nvalues);
+
                 // update counter
                 dim_sub += nvalues;
 
@@ -269,8 +269,8 @@ fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize
 }
 
 /// Orthogonalize the subpsace using the QR method
-fn orthogonalize_subspace(vectors: DMatrix<f64>) -> DMatrix<f64> {
-    let mgs = MGS::new(vectors);
+fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize, end: usize) -> DMatrix<f64> {
+    let mgs = MGS::new(vectors, start, end);
     match mgs {
         Ok(result) => result.basis,
         Err(msg) => panic!("Error orthonormalising the basis:{}", msg),

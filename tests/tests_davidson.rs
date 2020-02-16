@@ -35,15 +35,17 @@ fn test_davidson_unsorted() {
 #[test]
 fn test_davidson_highest() {
     // Test the compution of the highest eigenvalues
-    let arr = generate_diagonal_dominant(10, 0.005);
+    let dim = 100;
+    let nvalues = 7;
+    let arr = generate_diagonal_dominant(dim, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), false);
 
     let target = SpectrumTarget::Highest;
 
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", target.clone()).unwrap();
-    test_eigenpairs(&eig, dav_eig, 2);
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", target).unwrap();
-    test_eigenpairs(&eig, dav_eig, 2);
+    let dav_eig = EigenDavidson::new(arr.clone(), nvalues, "DPR", target.clone()).unwrap();
+    test_eigenpairs(&eig, dav_eig, nvalues);
+    let dav_eig = EigenDavidson::new(arr.clone(), nvalues, "GJD", target).unwrap();
+    test_eigenpairs(&eig, dav_eig, nvalues);
 }
 
 fn test_eigenpairs(
