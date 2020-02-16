@@ -22,6 +22,7 @@ extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
+use crate::MGS;
 use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector};
 use std::f64;
@@ -60,7 +61,7 @@ impl Config {
         Config {
             method: String::from(method),
             spectrum_target: target,
-            tolerance: 1e-6,
+            tolerance: 1e-4,
             max_iters: 100,
             max_search_space: max_search_space,
             init_dim: nvalues * 2,
@@ -123,7 +124,6 @@ impl EigenDavidson {
                     .column_iter()
                     .map(|col| col.norm()),
             );
-
             // 4.3 Check if all eigenvalues/eigenvectors have converged
             if errors.iter().all(|&x| x < conf.tolerance) {
                 result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
@@ -132,15 +132,15 @@ impl EigenDavidson {
 
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if 2 * dim_sub <= conf.max_search_space {
+            if dim_sub + nvalues <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
+                update_subspace(&mut basis, correction, dim_sub, dim_sub + nvalues);
 
                 // 6. Orthogonalize the subspace
                 basis = orthogonalize_subspace(basis);
                 // update counter
-                dim_sub *= 2;
+                dim_sub += nvalues;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
@@ -269,9 +269,12 @@ fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize
 }
 
 /// Orthogonalize the subpsace using the QR method
-fn orthogonalize_subspace(basis: DMatrix<f64>) -> DMatrix<f64> {
-    let qr = na::linalg::QR::new(basis);
-    qr.q()
+fn orthogonalize_subspace(vectors: DMatrix<f64>) -> DMatrix<f64> {
+    let mgs = MGS::new(vectors);
+    match mgs {
+        Ok(result) => result.basis,
+        Err(msg) => panic!("Error orthonormalising the basis:{}", msg),
+    }
 }
 
 /// Residue vectors
