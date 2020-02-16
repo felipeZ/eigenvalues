@@ -102,7 +102,7 @@ impl EigenDavidson {
         for i in 0..conf.max_iters {
             // 2. Generate subpace matrix problem by projecting into the basis
             let subspace = basis.columns(0, dim_sub);
-            let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace); // (&h * subspace);
+            let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace);
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let ord_sort = match conf.spectrum_target {
@@ -137,8 +137,7 @@ impl EigenDavidson {
                 update_subspace(&mut basis, correction, dim_sub, dim_sub + nvalues);
 
                 // 6. Orthogonalize the subspace
-                basis = orthogonalize_subspace(basis, dim_sub, dim_sub + nvalues);
-
+                basis = orthogonalize_subspace(basis, 0);
                 // update counter
                 dim_sub += nvalues;
 
@@ -269,8 +268,8 @@ fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize
 }
 
 /// Orthogonalize the subpsace using the QR method
-fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize, end: usize) -> DMatrix<f64> {
-    let mgs = MGS::new(vectors, start, end);
+fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize) -> DMatrix<f64> {
+    let mgs = MGS::new(vectors, start);
     match mgs {
         Ok(result) => result.basis,
         Err(msg) => panic!("Error orthonormalising the basis:{}", msg),

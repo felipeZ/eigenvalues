@@ -20,10 +20,9 @@ impl MGS {
     /// * `vectors` to diagonalize as columns of the matrix
     /// * `start` index of the column to start orthogonalizing
     /// * `end` last index of the column to diagonalize (non-inclusive)
-    pub fn new(vectors: DMatrix<f64>, start: usize, end: usize) -> Result<Self, &'static str> {
-        let mut basis = vectors.clone();
+    pub fn new(mut basis: DMatrix<f64>, start: usize) -> Result<Self, &'static str> {
+	let end = basis.ncols();
         for i in start..end {
-            basis.set_column(i, &vectors.column(i));
             for j in 0..i {
                 let proj = MGS::project(&basis.column(j), &basis.column(i));
                 basis.set_column(i, &(basis.column(i) - proj));
@@ -59,8 +58,7 @@ mod test {
     }
 
     fn fun_test(vectors: DMatrix<f64>, start: usize) {
-        let end = vectors.ncols();
-        let mgs_result = super::MGS::new(vectors, start, end);
+        let mgs_result = super::MGS::new(vectors, start);
         let basis = match mgs_result {
             Ok(ortho) => ortho.basis,
             Err(message) => panic!(message),
