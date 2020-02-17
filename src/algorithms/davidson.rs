@@ -224,8 +224,11 @@ where
         let mut correction = DMatrix::<f64>::zeros(self.target.rows(), residues.ncols());
         for (k, r) in eigenvalues.iter().enumerate() {
             let rs = DVector::<f64>::repeat(self.target.rows(), *r);
-            let x = residues.column(k).component_mul(&(rs - &d));
-            correction.set_column(k, &x);
+            let mut tmp = residues.column(k).component_mul(&(rs - &d));
+            for x in tmp.iter_mut() {
+                *x /= 1.0;
+            }
+            correction.set_column(k, &tmp);
         }
         correction
     }

@@ -46,7 +46,7 @@ mod test {
 
     #[test]
     fn test_gram_schmidt() {
-        let dim = 10;
+        let dim = 20;
         let vectors = DMatrix::<f64>::new_random(dim, dim);
         fun_test(vectors, 0);
     }
