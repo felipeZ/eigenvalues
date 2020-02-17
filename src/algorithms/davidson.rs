@@ -245,11 +245,13 @@ where
         let id = DMatrix::<f64>::identity(dimx, dimx);
         let ones = DVector::<f64>::repeat(dimx, 1.0);
         let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
+        let diag = self.target.diagonal();
         for (k, r) in ritz_vectors.column_iter().enumerate() {
             // Create the components of the linear system
             let t1 = &id - r * r.transpose();
             let mut t2 = self.target.clone();
-            t2.set_diagonal(&(eigenvalues[k] * &ones));
+            let val = &diag - &(eigenvalues[k] * &ones);
+            t2.set_diagonal(&val);
             let arr = &t1 * &t2.matrix_matrix_prod(t1.rows(0, dimx));
             // Solve the linear system
             let decomp = arr.lu();
