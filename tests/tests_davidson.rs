@@ -59,7 +59,7 @@ fn test_eigenpairs(
         assert!(relative_eq!(
             reference.eigenvalues[i],
             dav_eig.eigenvalues[i],
-            epsilon = 1e-8
+            epsilon = 1e-6
         ));
         // Test Eigenvectors
         let x = reference.eigenvectors.column(i);

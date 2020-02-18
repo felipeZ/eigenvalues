@@ -131,15 +131,15 @@ impl EigenDavidson {
             }
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if dim_sub + nvalues <= conf.max_search_space {
+            if dim_sub + 2 * nvalues <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, dim_sub, dim_sub + nvalues);
+                update_subspace(&mut basis, correction, dim_sub, dim_sub + 2 * nvalues);
 
                 // 6. Orthogonalize the subspace
                 basis = orthogonalize_subspace(basis, 0);
                 // update counter
-                dim_sub += nvalues;
+                dim_sub += 2 * nvalues;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
