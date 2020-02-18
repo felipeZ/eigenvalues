@@ -97,6 +97,9 @@ impl EigenDavidson {
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
 
+        // number of vectors to append to the subspace
+        let new_vectors = 2 * nvalues;
+
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
         for i in 0..conf.max_iters {
@@ -131,15 +134,15 @@ impl EigenDavidson {
             }
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if dim_sub + 2 * nvalues <= conf.max_search_space {
+            if dim_sub + new_vectors <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, dim_sub, dim_sub + 2 * nvalues);
+                update_subspace(&mut basis, correction, dim_sub, dim_sub + new_vectors);
 
                 // 6. Orthogonalize the subspace
                 basis = orthogonalize_subspace(basis, 0);
                 // update counter
-                dim_sub += 2 * nvalues;
+                dim_sub += new_vectors;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
