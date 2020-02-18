@@ -222,13 +222,10 @@ where
     ) -> DMatrix<f64> {
         let d = self.target.diagonal();
         let mut correction = DMatrix::<f64>::zeros(self.target.rows(), residues.ncols());
-        for (k, r) in eigenvalues.iter().enumerate() {
-            let rs = DVector::<f64>::repeat(self.target.rows(), *r);
-            let mut tmp = residues.column(k).component_mul(&(rs - &d));
-            for x in tmp.iter_mut() {
-                *x /= 1.0;
-            }
-            correction.set_column(k, &tmp);
+        for (k, lambda) in eigenvalues.iter().enumerate() {
+            let tmp = DVector::<f64>::repeat(self.target.rows(), *lambda) - &d;
+            let rs = residues.column(k).component_div(&tmp);
+            correction.set_column(k, &rs);
         }
         correction
     }
