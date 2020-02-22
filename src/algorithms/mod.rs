@@ -7,7 +7,7 @@ pub mod davidson;
 
 /// Option to compute the lowest, highest or somewhere in the middle part of the
 /// spectrum
-#[derive(Clone)]
+#[derive(Clone,PartialEq)]
 pub enum SpectrumTarget {
     Lowest,
     Highest,

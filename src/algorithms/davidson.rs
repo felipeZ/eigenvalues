@@ -62,7 +62,7 @@ impl Config {
             method: String::from(method),
             spectrum_target: target,
             tolerance: 1e-4,
-            max_iters: 100,
+            max_iters: 50,
             max_search_space: max_search_space,
             init_dim: nvalues * 2,
         }
@@ -96,9 +96,6 @@ impl EigenDavidson {
 
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
-
-        // number of vectors to append to the subspace
-        let new_vectors = 2 * nvalues;
 
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
@@ -134,22 +131,23 @@ impl EigenDavidson {
             }
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if dim_sub + new_vectors <= conf.max_search_space {
+            if dim_sub + conf.init_dim <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, dim_sub, dim_sub + new_vectors);
+                update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.init_dim));
 
                 // 6. Orthogonalize the subspace
-                basis = orthogonalize_subspace(basis, 0);
+                basis = orthogonalize_subspace(basis, dim_sub);
+
                 // update counter
-                dim_sub += new_vectors;
+                dim_sub += conf.init_dim;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
             } else {
                 dim_sub = conf.init_dim;
                 basis.fill(0.0);
-                update_subspace(&mut basis, ritz_vectors, 0, dim_sub);
+                update_subspace(&mut basis, ritz_vectors, (0, dim_sub));
             }
             // Check number of iterations
             if i > conf.max_iters {
@@ -264,8 +262,9 @@ where
 }
 
 /// Update the subpace with new vectors
-fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize, end: usize) {
+fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, range: (usize, usize)) {
     let mut i = 0; // indices for the new vector to add
+    let (start, end) = range;
     for k in start..end {
         basis.set_column(k, &vectors.column(i));
         i += 1;
@@ -299,17 +298,13 @@ fn compute_residues<M: MatrixOperations>(
 
 /// Generate initial orthonormal subspace
 fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
-    if is_sorted(diag) {
+    if is_sorted(diag) && conf.spectrum_target == SpectrumTarget::Lowest {
         DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
     } else {
         let xs = diag.as_slice().to_vec();
         let mut rs = xs.clone();
 
-        match conf.spectrum_target {
-            SpectrumTarget::Lowest => utils::sort_vector(&mut rs, true),
-            SpectrumTarget::Highest => utils::sort_vector(&mut rs, false),
-            _ => panic!("Not implemented error!"),
-        }
+        sort_diagonal(&mut rs, &conf);
 
         // update the matrix according to the spectrumtarget
         let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
@@ -321,13 +316,22 @@ fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
     }
 }
 
+fn sort_diagonal(rs: &mut Vec<f64>, conf: &Config) {
+    match conf.spectrum_target {
+        SpectrumTarget::Lowest => utils::sort_vector(rs, true),
+        SpectrumTarget::Highest => utils::sort_vector(rs, false),
+        _ => panic!("Not implemented error!"),
+    }
+}
+
 /// Check if a vector is sorted in ascending order
 fn is_sorted(xs: &DVector<f64>) -> bool {
-    let mut d: Vec<f64> = xs.iter().cloned().collect();
-    d.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-    let vs: DVector<f64> = DVector::<f64>::from_vec(d);
-    let r = xs - vs;
-    r.norm() < f64::EPSILON
+    for k in 1..xs.len() {
+        if xs[k] < xs[k - 1] {
+            return false;
+        }
+    }
+    return true;
 }
 
 #[cfg(test)]
@@ -339,7 +343,7 @@ mod test {
     fn test_update_subspace() {
         let mut arr = DMatrix::<f64>::repeat(3, 3, 1.);
         let brr = DMatrix::<f64>::zeros(3, 2);
-        super::update_subspace(&mut arr, brr, 0, 2);
+        super::update_subspace(&mut arr, brr, (0, 2));
         assert_eq!(arr.column(1).sum(), 0.);
         assert_eq!(arr.column(2).sum(), 3.);
     }
