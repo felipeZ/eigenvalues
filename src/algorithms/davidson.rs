@@ -92,7 +92,7 @@ impl EigenDavidson {
         // Initial subpace
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
-        let mut basis = generate_subspace(&h.diagonal(), &conf);
+        let mut basis = Self::generate_subspace(&h.diagonal(), &conf);
 
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
@@ -114,7 +114,7 @@ impl EigenDavidson {
             // 4. Check for convergence
             // 4.1 Compute the residues
             let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
-            let residues = compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
+            let residues = Self::compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
 
             // 4.2 Check Converge for each pair eigenvalue/eigenvector
             let errors = DVector::<f64>::from_iterator(
@@ -126,7 +126,11 @@ impl EigenDavidson {
             );
             // 4.3 Check if all eigenvalues/eigenvectors have converged
             if errors.iter().all(|&x| x < conf.tolerance) {
-                result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
+                result = Ok(Self::create_results(
+                    &eig.eigenvalues,
+                    &ritz_vectors,
+                    nvalues,
+                ));
                 break;
             }
             // 5. Update subspace basis set
@@ -137,7 +141,7 @@ impl EigenDavidson {
                 update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.init_dim));
 
                 // 6. Orthogonalize the subspace
-                basis = orthogonalize_subspace(basis, dim_sub);
+                basis = Self::orthogonalize_subspace(basis, dim_sub);
 
                 // update counter
                 dim_sub += conf.init_dim;
@@ -156,26 +160,71 @@ impl EigenDavidson {
         }
         result
     }
-}
 
-/// Extract the requested eigenvalues/eigenvectors pairs
-fn create_results(
-    subspace_eigenvalues: &DVector<f64>,
-    ritz_vectors: &DMatrix<f64>,
-    nvalues: usize,
-) -> EigenDavidson {
-    let eigenvectors = DMatrix::<f64>::from_iterator(
-        ritz_vectors.nrows(),
-        nvalues,
-        ritz_vectors.columns(0, nvalues).iter().cloned(),
-    );
-    let eigenvalues = DVector::<f64>::from_iterator(
-        nvalues,
-        subspace_eigenvalues.rows(0, nvalues).iter().cloned(),
-    );
-    EigenDavidson {
-        eigenvalues,
-        eigenvectors,
+    /// Orthogonalize the subpsace using the modified Gram-Schmidt method
+    fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize) -> DMatrix<f64> {
+        let mgs = MGS::new(vectors, start);
+        match mgs {
+            Ok(result) => result.basis,
+            Err(msg) => panic!("Error orthonormalising the basis:{}", msg),
+        }
+    }
+
+    /// Extract the requested eigenvalues/eigenvectors pairs
+    fn create_results(
+        subspace_eigenvalues: &DVector<f64>,
+        ritz_vectors: &DMatrix<f64>,
+        nvalues: usize,
+    ) -> EigenDavidson {
+        let eigenvectors = DMatrix::<f64>::from_iterator(
+            ritz_vectors.nrows(),
+            nvalues,
+            ritz_vectors.columns(0, nvalues).iter().cloned(),
+        );
+        let eigenvalues = DVector::<f64>::from_iterator(
+            nvalues,
+            subspace_eigenvalues.rows(0, nvalues).iter().cloned(),
+        );
+        EigenDavidson {
+            eigenvalues,
+            eigenvectors,
+        }
+    }
+
+    /// Residue vectors
+    fn compute_residues<M: MatrixOperations>(
+        h: &M,
+        eigenvalues: &DVector<f64>,
+        ritz_vectors: &DMatrix<f64>,
+    ) -> DMatrix<f64> {
+        let dim_sub = eigenvalues.nrows();
+        let mut residues = DMatrix::<f64>::zeros(h.rows(), dim_sub);
+        for k in 0..dim_sub {
+            let guess = eigenvalues[k] * ritz_vectors.column(k);
+            let vs = h.matrix_vector_prod(ritz_vectors.column(k));
+            residues.set_column(k, &(vs - guess));
+        }
+        residues
+    }
+
+    /// Generate initial orthonormal subspace
+    fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
+        if is_sorted(diag) && conf.spectrum_target == SpectrumTarget::Lowest {
+            DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
+        } else {
+            let xs = diag.as_slice().to_vec();
+            let mut rs = xs.clone();
+
+            sort_diagonal(&mut rs, &conf);
+
+            // update the matrix according to the spectrumtarget
+            let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
+            for i in 0..conf.max_search_space {
+                let index = rs.iter().position(|&x| x == xs[i]).unwrap();
+                mtx[(i, index)] = 1.0;
+            }
+            mtx
+        }
     }
 }
 
@@ -268,51 +317,6 @@ fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, range: (usiz
     for k in start..end {
         basis.set_column(k, &vectors.column(i));
         i += 1;
-    }
-}
-
-/// Orthogonalize the subpsace using the QR method
-fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize) -> DMatrix<f64> {
-    let mgs = MGS::new(vectors, start);
-    match mgs {
-        Ok(result) => result.basis,
-        Err(msg) => panic!("Error orthonormalising the basis:{}", msg),
-    }
-}
-
-/// Residue vectors
-fn compute_residues<M: MatrixOperations>(
-    h: &M,
-    eigenvalues: &DVector<f64>,
-    ritz_vectors: &DMatrix<f64>,
-) -> DMatrix<f64> {
-    let dim_sub = eigenvalues.nrows();
-    let mut residues = DMatrix::<f64>::zeros(h.rows(), dim_sub);
-    for k in 0..dim_sub {
-        let guess = eigenvalues[k] * ritz_vectors.column(k);
-        let vs = h.matrix_vector_prod(ritz_vectors.column(k));
-        residues.set_column(k, &(vs - guess));
-    }
-    residues
-}
-
-/// Generate initial orthonormal subspace
-fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
-    if is_sorted(diag) && conf.spectrum_target == SpectrumTarget::Lowest {
-        DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
-    } else {
-        let xs = diag.as_slice().to_vec();
-        let mut rs = xs.clone();
-
-        sort_diagonal(&mut rs, &conf);
-
-        // update the matrix according to the spectrumtarget
-        let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
-        for i in 0..conf.max_search_space {
-            let index = rs.iter().position(|&x| x == xs[i]).unwrap();
-            mtx[(i, index)] = 1.0;
-        }
-        mtx
     }
 }
 
