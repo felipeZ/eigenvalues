@@ -13,7 +13,7 @@ fn test_davidson_lowest() {
     let arr = generate_diagonal_dominant(10, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
     let spectrum_target = SpectrumTarget::Lowest;
-    let tolerance = 1.0e-6;
+    let tolerance = 1.0e-4;
 
     let dav_eig =
         EigenDavidson::new(arr.clone(), 2, "DPR", spectrum_target.clone(), tolerance).unwrap();
