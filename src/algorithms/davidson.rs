@@ -312,11 +312,10 @@ where
 
 /// Update the subpace with new vectors
 fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, range: (usize, usize)) {
-    let mut i = 0; // indices for the new vector to add
     let (start, end) = range;
-    for k in start..end {
+    let it = start..end;
+    for (i, k) in it.enumerate() {
         basis.set_column(k, &vectors.column(i));
-        i += 1;
     }
 }
 
