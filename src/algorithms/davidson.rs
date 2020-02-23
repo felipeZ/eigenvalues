@@ -43,7 +43,13 @@ impl Config {
     /// * `dim` - dimension of the matrix to diagonalize
     /// * `method` - Either DPR or GJD
     /// * `target` Lowest, highest or somewhere in the middle portion of the spectrum
-    fn new(nvalues: usize, dim: usize, method: &str, target: SpectrumTarget) -> Self {
+    fn new(
+        nvalues: usize,
+        dim: usize,
+        method: &str,
+        target: SpectrumTarget,
+        tolerance: f64,
+    ) -> Self {
         let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
@@ -61,7 +67,7 @@ impl Config {
         Config {
             method: String::from(method),
             spectrum_target: target,
-            tolerance: 1e-4,
+            tolerance: tolerance,
             max_iters: 50,
             max_search_space: max_search_space,
             init_dim: nvalues * 2,
@@ -85,9 +91,10 @@ impl EigenDavidson {
         nvalues: usize,
         method: &str,
         spectrum_target: SpectrumTarget,
+        tolerance: f64,
     ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows(), method, spectrum_target);
+        let conf = Config::new(nvalues, h.rows(), method, spectrum_target, tolerance);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
