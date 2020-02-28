@@ -16,12 +16,12 @@ pub struct MGS {
 }
 
 impl MGS {
-    /// The new static method takes three argument:
+    /// The orthonormalize static method takes three argument:
     /// * `vectors` to diagonalize as columns of the matrix
     /// * `start` index of the column to start orthogonalizing
     /// * `end` last index of the column to diagonalize (non-inclusive)
-    pub fn new(mut basis: DMatrix<f64>, start: usize) -> Result<Self, &'static str> {
-	let end = basis.ncols();
+    pub fn orthonormalize(basis: &mut DMatrix<f64>, start: usize) {
+        let end = basis.ncols();
         for i in start..end {
             for j in 0..i {
                 let proj = MGS::project(&basis.column(j), &basis.column(i));
@@ -29,7 +29,6 @@ impl MGS {
             }
             basis.set_column(i, &basis.column(i).normalize());
         }
-        Ok(MGS { basis })
     }
 
     // Project
@@ -58,11 +57,8 @@ mod test {
     }
 
     fn fun_test(vectors: DMatrix<f64>, start: usize) {
-        let mgs_result = super::MGS::new(vectors, start);
-        let basis = match mgs_result {
-            Ok(ortho) => ortho.basis,
-            Err(message) => panic!(message),
-        };
+        let mut basis = vectors.clone();
+        super::MGS::orthonormalize(&mut basis, start);
         let result = basis.transpose() * &basis;
         assert!(result.is_identity(1e-8));
     }

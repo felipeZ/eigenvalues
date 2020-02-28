@@ -149,7 +149,7 @@ impl EigenDavidson {
                 update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.init_dim));
 
                 // 6. Orthogonalize the subspace
-                basis = Self::orthogonalize_subspace(basis, dim_sub);
+                MGS::orthonormalize(&mut basis, dim_sub);
 
                 // update counter
                 dim_sub += conf.init_dim;
@@ -167,15 +167,6 @@ impl EigenDavidson {
             }
         }
         result
-    }
-
-    /// Orthogonalize the subpsace using the modified Gram-Schmidt method
-    fn orthogonalize_subspace(vectors: DMatrix<f64>, start: usize) -> DMatrix<f64> {
-        let mgs = MGS::new(vectors, start);
-        match mgs {
-            Ok(result) => result.basis,
-            Err(msg) => panic!("Error orthonormalising the basis:{}", msg),
-        }
     }
 
     /// Extract the requested eigenvalues/eigenvectors pairs
