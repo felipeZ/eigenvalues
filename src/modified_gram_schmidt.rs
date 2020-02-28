@@ -20,8 +20,7 @@ impl MGS {
     /// * `vectors` to diagonalize as columns of the matrix
     /// * `start` index of the column to start orthogonalizing
     /// * `end` last index of the column to diagonalize (non-inclusive)
-    pub fn orthonormalize(basis: &mut DMatrix<f64>, start: usize) {
-        let end = basis.ncols();
+    pub fn orthonormalize(basis: &mut DMatrix<f64>, start: usize, end: usize) {
         for i in start..end {
             for j in 0..i {
                 let proj = MGS::project(&basis.column(j), &basis.column(i));
@@ -58,7 +57,7 @@ mod test {
 
     fn fun_test(vectors: DMatrix<f64>, start: usize) {
         let mut basis = vectors.clone();
-        super::MGS::orthonormalize(&mut basis, start);
+        super::MGS::orthonormalize(&mut basis, start, vectors.ncols());
         let result = basis.transpose() * &basis;
         assert!(result.is_identity(1e-8));
     }

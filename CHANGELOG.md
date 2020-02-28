@@ -1,7 +1,12 @@
-## [Unreleased]
+# [Unreleased]
+
+## [0.2.1]
+
+## Fixed
+* Only orthogonalize the new vectors added to the subpace
 
 
-## [0.2.0]
+## [0.2.0] 28-02-2029
 
 ## Changed
 * Used [modified Gram-Schmidt orthogonalization](https://github.com/felipeZ/eigenvalues/issues/8)

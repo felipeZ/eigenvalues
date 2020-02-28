@@ -152,7 +152,7 @@ impl EigenDavidson {
                 update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.update_dim));
 
                 // 6. Orthogonalize the subspace
-                MGS::orthonormalize(&mut basis, dim_sub);
+                MGS::orthonormalize(&mut basis, dim_sub, dim_sub + conf.update_dim);
 
                 // Update projected matrix
                 matrix_subspace = {
@@ -177,7 +177,6 @@ impl EigenDavidson {
                     slice.copy_from(&new_block.transpose());
                     tmp
                 };
-
                 // update counter
                 dim_sub += conf.update_dim;
 
