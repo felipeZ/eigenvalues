@@ -35,7 +35,8 @@ struct Config {
     tolerance: f64,
     max_iters: usize,
     max_search_space: usize,
-    init_dim: usize,
+    init_dim: usize,   // Initial dimension of the subpace
+    update_dim: usize, // number of vector to add to the search space
 }
 impl Config {
     /// Choose sensible default values for the davidson algorithm, where:
@@ -43,6 +44,7 @@ impl Config {
     /// * `dim` - dimension of the matrix to diagonalize
     /// * `method` - Either DPR or GJD
     /// * `target` Lowest, highest or somewhere in the middle portion of the spectrum
+    /// * `tolerance` Numerical tolerance to reach convergence
     fn new(
         nvalues: usize,
         dim: usize,
@@ -71,6 +73,7 @@ impl Config {
             max_iters: 50,
             max_search_space,
             init_dim: nvalues * 2,
+            update_dim: nvalues * 2,
         }
     }
 }
@@ -143,31 +146,31 @@ impl EigenDavidson {
             }
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if dim_sub + conf.init_dim <= conf.max_search_space {
+            if dim_sub + conf.update_dim <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.init_dim));
+                update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.update_dim));
 
                 // 6. Orthogonalize the subspace
                 MGS::orthonormalize(&mut basis, dim_sub);
 
                 // Update projected matrix
                 matrix_subspace = {
-                    let mut tmp = matrix_subspace.insert_columns(dim_sub, conf.init_dim, 0.0);
-                    let new_block = h.matrix_matrix_prod(basis.columns(dim_sub, conf.init_dim));
-                    let mut slice = tmp.columns_mut(dim_sub, conf.init_dim);
+                    let mut tmp = matrix_subspace.insert_columns(dim_sub, conf.update_dim, 0.0);
+                    let new_block = h.matrix_matrix_prod(basis.columns(dim_sub, conf.update_dim));
+                    let mut slice = tmp.columns_mut(dim_sub, conf.update_dim);
                     slice.copy_from(&new_block);
                     tmp
                 };
 
                 matrix_proj = {
-                    let new_dim = dim_sub + conf.init_dim;
+                    let new_dim = dim_sub + conf.update_dim;
                     let new_subspace = basis.columns(0, new_dim);
                     let mut tmp = DMatrix::<f64>::zeros(new_dim, new_dim);
                     let mut slice = tmp.index_mut((..dim_sub, ..dim_sub));
                     slice.copy_from(&matrix_proj);
-                    let new_block =
-                        new_subspace.transpose() * matrix_subspace.columns(dim_sub, conf.init_dim);
+                    let new_block = new_subspace.transpose()
+                        * matrix_subspace.columns(dim_sub, conf.update_dim);
                     let mut slice = tmp.index_mut((.., dim_sub..));
                     slice.copy_from(&new_block);
                     let mut slice = tmp.index_mut((dim_sub.., ..));
@@ -176,7 +179,7 @@ impl EigenDavidson {
                 };
 
                 // update counter
-                dim_sub += conf.init_dim;
+                dim_sub += conf.update_dim;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
