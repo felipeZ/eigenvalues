@@ -104,24 +104,24 @@ impl EigenDavidson {
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
 
+        // 2. Generate subpace matrix problem by projecting into the basis
+        let first_subspace = basis.columns(0, dim_sub);
+        let mut matrix_subspace = h.matrix_matrix_prod(first_subspace);
+        let mut matrix_proj = first_subspace.transpose() * &matrix_subspace;
+
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
         for i in 0..conf.max_iters {
-            // 2. Generate subpace matrix problem by projecting into the basis
-            let subspace = basis.columns(0, dim_sub);
-            let matrix_subspace = h.matrix_matrix_prod(subspace);
-            let matrix_proj = subspace.transpose() * &matrix_subspace;
-
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let ord_sort = match conf.spectrum_target {
                 SpectrumTarget::Highest => false,
                 _ => true,
             };
-            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj), ord_sort);
+            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj.clone()), ord_sort);
 
             // 4. Check for convergence
             // 4.1 Compute the residues
-            let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
+            let ritz_vectors = basis.columns(0, dim_sub) * eig.eigenvectors.columns(0, dim_sub);
             let residues = Self::compute_residues(&ritz_vectors, &matrix_subspace, &eig);
 
             // 4.2 Check Converge for each pair eigenvalue/eigenvector
@@ -151,6 +151,15 @@ impl EigenDavidson {
                 // 6. Orthogonalize the subspace
                 MGS::orthonormalize(&mut basis, dim_sub);
 
+                // Update projected matrix
+                matrix_subspace = {
+                    let mut tmp = matrix_subspace.insert_columns(dim_sub, conf.init_dim, 0.0);
+                    let new_block = h.matrix_matrix_prod(basis.columns(dim_sub, conf.init_dim));
+                    let mut slice = tmp.columns_mut(dim_sub, conf.init_dim);
+                    slice.copy_from(&new_block);
+		    tmp
+                };
+
                 // update counter
                 dim_sub += conf.init_dim;
 
@@ -160,11 +169,14 @@ impl EigenDavidson {
                 dim_sub = conf.init_dim;
                 basis.fill(0.0);
                 update_subspace(&mut basis, ritz_vectors, (0, dim_sub));
+                // Update projected matrix
+                matrix_subspace = h.matrix_matrix_prod(basis.columns(0, dim_sub));
             }
             // Check number of iterations
             if i > conf.max_iters {
                 break;
             }
+            matrix_proj = basis.columns(0, dim_sub).transpose() * &matrix_subspace;
         }
         result
     }
