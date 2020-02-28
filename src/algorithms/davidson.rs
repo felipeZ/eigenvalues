@@ -321,9 +321,8 @@ where
 /// Update the subpace with new vectors
 fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, range: (usize, usize)) {
     let (start, end) = range;
-    for (i, k) in (start..end).enumerate() {
-        basis.set_column(k, &vectors.column(i));
-    }
+    let mut slice = basis.index_mut((.., start..end));
+    slice.copy_from(&vectors.columns(0, end - start));
 }
 
 fn sort_diagonal(rs: &mut Vec<f64>, conf: &Config) {
