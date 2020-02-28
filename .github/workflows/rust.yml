@@ -3,13 +3,20 @@ name: build
 on: [push]
 
 jobs:
-  build:
-
+  build_debug:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v1
     - name: Build
       run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+
+  build_release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build
+      run: cargo build --release --verbose
     - name: Run tests
       run: cargo test --verbose
