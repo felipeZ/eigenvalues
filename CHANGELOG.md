@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+
+## [0.2.0]
+
+## Changed
+* Used [modified Gram-Schmidt orthogonalization](https://github.com/felipeZ/eigenvalues/issues/8)
+* [Reduce scaling of the search space](https://github.com/felipeZ/eigenvalues/issues/10)
+
+### Fixed
+* Bug in DPR correction.
+
 ## [0.1.4]
 
 ### Changed

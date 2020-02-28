@@ -22,8 +22,9 @@ extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
+use crate::MGS;
 use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector};
+use na::{DMatrix, DVector, Dynamic};
 use std::f64;
 use std::ops::Not;
 
@@ -42,7 +43,13 @@ impl Config {
     /// * `dim` - dimension of the matrix to diagonalize
     /// * `method` - Either DPR or GJD
     /// * `target` Lowest, highest or somewhere in the middle portion of the spectrum
-    fn new(nvalues: usize, dim: usize, method: &str, target: SpectrumTarget) -> Self {
+    fn new(
+        nvalues: usize,
+        dim: usize,
+        method: &str,
+        target: SpectrumTarget,
+        tolerance: f64,
+    ) -> Self {
         let max_search_space = if nvalues * 10 < dim {
             nvalues * 10
         } else {
@@ -60,8 +67,8 @@ impl Config {
         Config {
             method: String::from(method),
             spectrum_target: target,
-            tolerance: 1e-6,
-            max_iters: 100,
+            tolerance: tolerance,
+            max_iters: 50,
             max_search_space: max_search_space,
             init_dim: nvalues * 2,
         }
@@ -84,36 +91,38 @@ impl EigenDavidson {
         nvalues: usize,
         method: &str,
         spectrum_target: SpectrumTarget,
+        tolerance: f64,
     ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows(), method, spectrum_target);
+        let conf = Config::new(nvalues, h.rows(), method, spectrum_target, tolerance);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
         // 1.1 Select the initial ortogonal subspace based on lowest elements
-        let mut basis = generate_subspace(&h.diagonal(), &conf);
+        let mut basis = Self::generate_subspace(&h.diagonal(), &conf);
 
         // 1.2 Select the correction to use
         let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
 
+        // 2. Generate subpace matrix problem by projecting into the basis
+        let first_subspace = basis.columns(0, dim_sub);
+        let mut matrix_subspace = h.matrix_matrix_prod(first_subspace);
+        let mut matrix_proj = first_subspace.transpose() * &matrix_subspace;
+
         // Outer loop block Davidson schema
         let mut result = Err("Algorithm didn't converge!");
         for i in 0..conf.max_iters {
-            // 2. Generate subpace matrix problem by projecting into the basis
-            let subspace = basis.columns(0, dim_sub);
-            let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace); // (&h * subspace);
-
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let ord_sort = match conf.spectrum_target {
                 SpectrumTarget::Highest => false,
                 _ => true,
             };
-            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj), ord_sort);
+            let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj.clone()), ord_sort);
 
             // 4. Check for convergence
             // 4.1 Compute the residues
-            let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
-            let residues = compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
+            let ritz_vectors = basis.columns(0, dim_sub) * eig.eigenvectors.columns(0, dim_sub);
+            let residues = Self::compute_residues(&ritz_vectors, &matrix_subspace, &eig);
 
             // 4.2 Check Converge for each pair eigenvalue/eigenvector
             let errors = DVector::<f64>::from_iterator(
@@ -123,31 +132,61 @@ impl EigenDavidson {
                     .column_iter()
                     .map(|col| col.norm()),
             );
-
             // 4.3 Check if all eigenvalues/eigenvectors have converged
             if errors.iter().all(|&x| x < conf.tolerance) {
-                result = Ok(create_results(&eig.eigenvalues, &ritz_vectors, nvalues));
+                result = Ok(Self::create_results(
+                    &eig.eigenvalues,
+                    &ritz_vectors,
+                    nvalues,
+                ));
                 break;
             }
-
             // 5. Update subspace basis set
             // 5.1 Add the correction vectors to the current basis
-            if 2 * dim_sub <= conf.max_search_space {
+            if dim_sub + conf.init_dim <= conf.max_search_space {
                 let correction =
                     corrector.compute_correction(residues, &eig.eigenvalues, &ritz_vectors);
-                update_subspace(&mut basis, correction, dim_sub, dim_sub * 2);
+                update_subspace(&mut basis, correction, (dim_sub, dim_sub + conf.init_dim));
 
                 // 6. Orthogonalize the subspace
-                basis = orthogonalize_subspace(basis);
+                MGS::orthonormalize(&mut basis, dim_sub);
+
+                // Update projected matrix
+                matrix_subspace = {
+                    let mut tmp = matrix_subspace.insert_columns(dim_sub, conf.init_dim, 0.0);
+                    let new_block = h.matrix_matrix_prod(basis.columns(dim_sub, conf.init_dim));
+                    let mut slice = tmp.columns_mut(dim_sub, conf.init_dim);
+                    slice.copy_from(&new_block);
+                    tmp
+                };
+
+                matrix_proj = {
+                    let new_dim = dim_sub + conf.init_dim;
+                    let new_subspace = basis.columns(0, new_dim);
+                    let mut tmp = DMatrix::<f64>::zeros(new_dim, new_dim);
+                    let mut slice = tmp.index_mut((..dim_sub, ..dim_sub));
+                    slice.copy_from(&matrix_proj);
+                    let new_block =
+                        new_subspace.transpose() * matrix_subspace.columns(dim_sub, conf.init_dim);
+                    let mut slice = tmp.index_mut((.., dim_sub..));
+                    slice.copy_from(&new_block);
+                    let mut slice = tmp.index_mut((dim_sub.., ..));
+                    slice.copy_from(&new_block.transpose());
+                    tmp
+                };
+
                 // update counter
-                dim_sub *= 2;
+                dim_sub += conf.init_dim;
 
             // 5.2 Otherwise reduce the basis of the subspace to the current
             // correction
             } else {
                 dim_sub = conf.init_dim;
                 basis.fill(0.0);
-                update_subspace(&mut basis, ritz_vectors, 0, dim_sub);
+                update_subspace(&mut basis, ritz_vectors, (0, dim_sub));
+                // Update projected matrix
+                matrix_subspace = h.matrix_matrix_prod(basis.columns(0, dim_sub));
+                matrix_proj = basis.columns(0, dim_sub).transpose() * &matrix_subspace;
             }
             // Check number of iterations
             if i > conf.max_iters {
@@ -156,26 +195,62 @@ impl EigenDavidson {
         }
         result
     }
-}
 
-/// Extract the requested eigenvalues/eigenvectors pairs
-fn create_results(
-    subspace_eigenvalues: &DVector<f64>,
-    ritz_vectors: &DMatrix<f64>,
-    nvalues: usize,
-) -> EigenDavidson {
-    let eigenvectors = DMatrix::<f64>::from_iterator(
-        ritz_vectors.nrows(),
-        nvalues,
-        ritz_vectors.columns(0, nvalues).iter().cloned(),
-    );
-    let eigenvalues = DVector::<f64>::from_iterator(
-        nvalues,
-        subspace_eigenvalues.rows(0, nvalues).iter().cloned(),
-    );
-    EigenDavidson {
-        eigenvalues,
-        eigenvectors,
+    /// Extract the requested eigenvalues/eigenvectors pairs
+    fn create_results(
+        subspace_eigenvalues: &DVector<f64>,
+        ritz_vectors: &DMatrix<f64>,
+        nvalues: usize,
+    ) -> EigenDavidson {
+        let eigenvectors = DMatrix::<f64>::from_iterator(
+            ritz_vectors.nrows(),
+            nvalues,
+            ritz_vectors.columns(0, nvalues).iter().cloned(),
+        );
+        let eigenvalues = DVector::<f64>::from_iterator(
+            nvalues,
+            subspace_eigenvalues.rows(0, nvalues).iter().cloned(),
+        );
+        EigenDavidson {
+            eigenvalues,
+            eigenvectors,
+        }
+    }
+
+    /// Residue vectors
+    fn compute_residues(
+        ritz_vectors: &DMatrix<f64>,
+        matrix_subspace: &DMatrix<f64>,
+        eig: &SymmetricEigen<f64, Dynamic>,
+    ) -> DMatrix<f64> {
+        let dim_sub = eig.eigenvalues.nrows();
+        let lambda = {
+            let mut tmp = DMatrix::<f64>::zeros(dim_sub, dim_sub);
+            tmp.set_diagonal(&eig.eigenvalues);
+            tmp
+        };
+        let vs = matrix_subspace * &eig.eigenvectors;
+        let guess = ritz_vectors * lambda;
+        vs - guess
+    }
+
+    /// Generate initial orthonormal subspace
+    fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
+        if is_sorted(diag) && conf.spectrum_target == SpectrumTarget::Lowest {
+            DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
+        } else {
+            let xs = diag.as_slice().to_vec();
+            let mut rs = xs.clone();
+
+            // update the matrix according to the spectrumtarget
+            sort_diagonal(&mut rs, &conf);
+            let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
+            for i in 0..conf.max_search_space {
+                let index = rs.iter().position(|&x| x == xs[i]).unwrap();
+                mtx[(i, index)] = 1.0;
+            }
+            mtx
+        }
     }
 }
 
@@ -223,10 +298,10 @@ where
     ) -> DMatrix<f64> {
         let d = self.target.diagonal();
         let mut correction = DMatrix::<f64>::zeros(self.target.rows(), residues.ncols());
-        for (k, r) in eigenvalues.iter().enumerate() {
-            let rs = DVector::<f64>::repeat(self.target.rows(), *r);
-            let x = residues.column(k).component_mul(&(rs - &d));
-            correction.set_column(k, &x);
+        for (k, lambda) in eigenvalues.iter().enumerate() {
+            let tmp = DVector::<f64>::repeat(self.target.rows(), *lambda) - &d;
+            let rs = residues.column(k).component_div(&tmp);
+            correction.set_column(k, &rs);
         }
         correction
     }
@@ -243,11 +318,13 @@ where
         let id = DMatrix::<f64>::identity(dimx, dimx);
         let ones = DVector::<f64>::repeat(dimx, 1.0);
         let mut correction = DMatrix::<f64>::zeros(dimx, dimy);
+        let diag = self.target.diagonal();
         for (k, r) in ritz_vectors.column_iter().enumerate() {
             // Create the components of the linear system
             let t1 = &id - r * r.transpose();
             let mut t2 = self.target.clone();
-            t2.set_diagonal(&(eigenvalues[k] * &ones));
+            let val = &diag - &(eigenvalues[k] * &ones);
+            t2.set_diagonal(&val);
             let arr = &t1 * &t2.matrix_matrix_prod(t1.rows(0, dimx));
             // Solve the linear system
             let decomp = arr.lu();
@@ -260,67 +337,28 @@ where
 }
 
 /// Update the subpace with new vectors
-fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, start: usize, end: usize) {
-    let mut i = 0; // indices for the new vector to add
-    for k in start..end {
-        basis.set_column(k, &vectors.column(i));
-        i += 1;
-    }
+fn update_subspace(basis: &mut DMatrix<f64>, vectors: DMatrix<f64>, range: (usize, usize)) {
+    let (start, end) = range;
+    let mut slice = basis.index_mut((.., start..end));
+    slice.copy_from(&vectors.columns(0, end - start));
 }
 
-/// Orthogonalize the subpsace using the QR method
-fn orthogonalize_subspace(basis: DMatrix<f64>) -> DMatrix<f64> {
-    let qr = na::linalg::QR::new(basis);
-    qr.q()
-}
-
-/// Residue vectors
-fn compute_residues<M: MatrixOperations>(
-    h: &M,
-    eigenvalues: &DVector<f64>,
-    ritz_vectors: &DMatrix<f64>,
-) -> DMatrix<f64> {
-    let dim_sub = eigenvalues.nrows();
-    let mut residues = DMatrix::<f64>::zeros(h.rows(), dim_sub);
-    for k in 0..dim_sub {
-        let guess = eigenvalues[k] * ritz_vectors.column(k);
-        let vs = h.matrix_vector_prod(ritz_vectors.column(k));
-        residues.set_column(k, &(vs - guess));
-    }
-    residues
-}
-
-/// Generate initial orthonormal subspace
-fn generate_subspace(diag: &DVector<f64>, conf: &Config) -> DMatrix<f64> {
-    if is_sorted(diag) {
-        DMatrix::<f64>::identity(diag.nrows(), conf.max_search_space)
-    } else {
-        let xs = diag.as_slice().to_vec();
-        let mut rs = xs.clone();
-
-        match conf.spectrum_target {
-            SpectrumTarget::Lowest => utils::sort_vector(&mut rs, true),
-            SpectrumTarget::Highest => utils::sort_vector(&mut rs, false),
-            _ => panic!("Not implemented error!"),
-        }
-
-        // update the matrix according to the spectrumtarget
-        let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
-        for i in 0..conf.max_search_space {
-            let index = rs.iter().position(|&x| x == xs[i]).unwrap();
-            mtx[(i, index)] = 1.0;
-        }
-        mtx
+fn sort_diagonal(rs: &mut Vec<f64>, conf: &Config) {
+    match conf.spectrum_target {
+        SpectrumTarget::Lowest => utils::sort_vector(rs, true),
+        SpectrumTarget::Highest => utils::sort_vector(rs, false),
+        _ => panic!("Not implemented error!"),
     }
 }
 
 /// Check if a vector is sorted in ascending order
 fn is_sorted(xs: &DVector<f64>) -> bool {
-    let mut d: Vec<f64> = xs.iter().cloned().collect();
-    d.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
-    let vs: DVector<f64> = DVector::<f64>::from_vec(d);
-    let r = xs - vs;
-    r.norm() < f64::EPSILON
+    for k in 1..xs.len() {
+        if xs[k] < xs[k - 1] {
+            return false;
+        }
+    }
+    return true;
 }
 
 #[cfg(test)]
@@ -332,7 +370,7 @@ mod test {
     fn test_update_subspace() {
         let mut arr = DMatrix::<f64>::repeat(3, 3, 1.);
         let brr = DMatrix::<f64>::zeros(3, 2);
-        super::update_subspace(&mut arr, brr, 0, 2);
+        super::update_subspace(&mut arr, brr, (0, 2));
         assert_eq!(arr.column(1).sum(), 0.);
         assert_eq!(arr.column(2).sum(), 3.);
     }

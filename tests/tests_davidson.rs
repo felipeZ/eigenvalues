@@ -12,12 +12,13 @@ use eigenvalues::SpectrumTarget;
 fn test_davidson_lowest() {
     let arr = generate_diagonal_dominant(10, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
-
     let spectrum_target = SpectrumTarget::Lowest;
+    let tolerance = 1.0e-4;
 
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", spectrum_target.clone()).unwrap();
+    let dav_eig =
+        EigenDavidson::new(arr.clone(), 2, "DPR", spectrum_target.clone(), tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", spectrum_target).unwrap();
+    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", spectrum_target, tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
 }
 
@@ -25,25 +26,31 @@ fn test_davidson_lowest() {
 fn test_davidson_unsorted() {
     // Test the algorithm when the diagonal is unsorted
     let mut arr = generate_diagonal_dominant(8, 0.005);
+    let tolerance = 1.0e-6;
     let vs = na::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
     arr.set_diagonal(&vs);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
-    let dav_eig = EigenDavidson::new(arr, 1, "DPR", SpectrumTarget::Lowest).unwrap();
+    let dav_eig = EigenDavidson::new(arr, 1, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 1);
 }
 
 #[test]
 fn test_davidson_highest() {
     // Test the compution of the highest eigenvalues
-    let arr = generate_diagonal_dominant(10, 0.005);
+    let dim = 20;
+    let nvalues = 2;
+    let tolerance = 1.0e-4;
+    let arr = generate_diagonal_dominant(dim, 0.005);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), false);
 
     let target = SpectrumTarget::Highest;
-
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "DPR", target.clone()).unwrap();
-    test_eigenpairs(&eig, dav_eig, 2);
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", target).unwrap();
-    test_eigenpairs(&eig, dav_eig, 2);
+    println!("running DPR");
+    let dav_eig =
+        EigenDavidson::new(arr.clone(), nvalues, "DPR", target.clone(), tolerance).unwrap();
+    test_eigenpairs(&eig, dav_eig, nvalues);
+    println!("running GJD");
+    let dav_eig = EigenDavidson::new(arr.clone(), nvalues, "GJD", target, tolerance).unwrap();
+    test_eigenpairs(&eig, dav_eig, nvalues);
 }
 
 fn test_eigenpairs(
@@ -56,7 +63,7 @@ fn test_eigenpairs(
         assert!(relative_eq!(
             reference.eigenvalues[i],
             dav_eig.eigenvalues[i],
-            epsilon = 1e-8
+            epsilon = 1e-6
         ));
         // Test Eigenvectors
         let x = reference.eigenvectors.column(i);
