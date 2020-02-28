@@ -88,7 +88,9 @@ impl EigenDavidson {
     /// The new static method takes the following arguments:
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
-
+    /// * `method` Either DPR or GJD
+    /// * `spectrum_target` Lowest or Highest part of the spectrum
+    /// * `tolerance` numerical tolerance.
     pub fn new<M: MatrixOperations>(
         h: M,
         nvalues: usize,
