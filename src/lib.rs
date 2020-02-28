@@ -17,7 +17,7 @@ use na::{DMatrix, DVector};
 
 // Generate random symmetric matrix
 let brr = eigenvalues::utils::generate_diagonal_dominant(20, 0.005);
-let tolerance = 1e-6;
+let tolerance = 1e-4;
 
 // Compute the first 2 lowest eigenvalues/eigenvectors using the DPR method
 let eig = EigenDavidson::new (brr.clone(), 2, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();

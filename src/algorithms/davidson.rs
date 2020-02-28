@@ -224,9 +224,8 @@ impl EigenDavidson {
             let xs = diag.as_slice().to_vec();
             let mut rs = xs.clone();
 
-            sort_diagonal(&mut rs, &conf);
-
             // update the matrix according to the spectrumtarget
+            sort_diagonal(&mut rs, &conf);
             let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
             for i in 0..conf.max_search_space {
                 let index = rs.iter().position(|&x| x == xs[i]).unwrap();
