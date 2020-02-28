@@ -11,7 +11,7 @@ use na::{DMatrix, DVector};
 
 /// Generate a random highly diagonal symmetric matrix
 pub fn generate_diagonal_dominant(dim: usize, sparsity: f64) -> DMatrix<f64> {
-    let xs = 1..(dim + 1);
+    let xs = 1..=dim;
     let it = xs.map(|x: usize| x as f64);
     let vs = DVector::<f64>::from_iterator(dim, it);
     let mut arr = DMatrix::<f64>::new_random(dim, dim);
@@ -46,8 +46,8 @@ pub fn sort_eigenpairs(
     let dim_cols = eig.eigenvectors.ncols();
     let mut eigenvectors = DMatrix::<f64>::zeros(dim_rows, dim_cols);
 
-    for i in 0..dim_cols {
-        eigenvectors.set_column(i, &eig.eigenvectors.column(indices[i]));
+    for (k, i) in indices.iter().enumerate() {
+        eigenvectors.set_column(k, &eig.eigenvectors.column(*i));
     }
     SymmetricEigen {
         eigenvalues,

@@ -67,9 +67,9 @@ impl Config {
         Config {
             method: String::from(method),
             spectrum_target: target,
-            tolerance: tolerance,
+            tolerance,
             max_iters: 50,
-            max_search_space: max_search_space,
+            max_search_space,
             init_dim: nvalues * 2,
         }
     }
@@ -246,7 +246,10 @@ impl EigenDavidson {
             sort_diagonal(&mut rs, &conf);
             let mut mtx = DMatrix::<f64>::zeros(diag.nrows(), conf.max_search_space);
             for i in 0..conf.max_search_space {
-                let index = rs.iter().position(|&x| x == xs[i]).unwrap();
+                let index = rs
+                    .iter()
+                    .position(|&x| (x - xs[i]).abs() < f64::EPSILON)
+                    .unwrap();
                 mtx[(i, index)] = 1.0;
             }
             mtx
@@ -271,7 +274,7 @@ where
 {
     fn new(target: &'a M, method: &str) -> CorrectionMethod<'a, M> {
         CorrectionMethod {
-            target: target,
+            target,
             method: String::from(method),
         }
     }
@@ -358,7 +361,7 @@ fn is_sorted(xs: &DVector<f64>) -> bool {
             return false;
         }
     }
-    return true;
+    true
 }
 
 #[cfg(test)]
