@@ -24,7 +24,7 @@ use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use crate::MGS;
 use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector};
+use na::{DMatrix, DVector, Dynamic};
 use std::f64;
 use std::ops::Not;
 
@@ -109,7 +109,8 @@ impl EigenDavidson {
         for i in 0..conf.max_iters {
             // 2. Generate subpace matrix problem by projecting into the basis
             let subspace = basis.columns(0, dim_sub);
-            let matrix_proj = subspace.transpose() * &h.matrix_matrix_prod(subspace);
+            let matrix_subspace = h.matrix_matrix_prod(subspace);
+            let matrix_proj = subspace.transpose() * &matrix_subspace;
 
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let ord_sort = match conf.spectrum_target {
@@ -121,7 +122,7 @@ impl EigenDavidson {
             // 4. Check for convergence
             // 4.1 Compute the residues
             let ritz_vectors = subspace * eig.eigenvectors.columns(0, dim_sub);
-            let residues = Self::compute_residues(&h, &eig.eigenvalues, &ritz_vectors);
+            let residues = Self::compute_residues(&ritz_vectors, &matrix_subspace, &eig);
 
             // 4.2 Check Converge for each pair eigenvalue/eigenvector
             let errors = DVector::<f64>::from_iterator(
@@ -199,19 +200,20 @@ impl EigenDavidson {
     }
 
     /// Residue vectors
-    fn compute_residues<M: MatrixOperations>(
-        h: &M,
-        eigenvalues: &DVector<f64>,
+    fn compute_residues(
         ritz_vectors: &DMatrix<f64>,
+        matrix_subspace: &DMatrix<f64>,
+        eig: &SymmetricEigen<f64, Dynamic>,
     ) -> DMatrix<f64> {
-        let dim_sub = eigenvalues.nrows();
-        let mut residues = DMatrix::<f64>::zeros(h.rows(), dim_sub);
-        for k in 0..dim_sub {
-            let guess = eigenvalues[k] * ritz_vectors.column(k);
-            let vs = h.matrix_vector_prod(ritz_vectors.column(k));
-            residues.set_column(k, &(vs - guess));
-        }
-        residues
+        let dim_sub = eig.eigenvalues.nrows();
+        let lambda = {
+            let mut tmp = DMatrix::<f64>::zeros(dim_sub, dim_sub);
+            tmp.set_diagonal(&eig.eigenvalues);
+            tmp
+        };
+        let vs = matrix_subspace * &eig.eigenvectors;
+        let guess = ritz_vectors * lambda;
+        vs - guess
     }
 
     /// Generate initial orthonormal subspace
