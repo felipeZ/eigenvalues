@@ -157,7 +157,22 @@ impl EigenDavidson {
                     let new_block = h.matrix_matrix_prod(basis.columns(dim_sub, conf.init_dim));
                     let mut slice = tmp.columns_mut(dim_sub, conf.init_dim);
                     slice.copy_from(&new_block);
-		    tmp
+                    tmp
+                };
+
+                matrix_proj = {
+                    let new_dim = dim_sub + conf.init_dim;
+                    let new_subspace = basis.columns(0, new_dim);
+                    let mut tmp = DMatrix::<f64>::zeros(new_dim, new_dim);
+                    let mut slice = tmp.index_mut((..dim_sub, ..dim_sub));
+                    slice.copy_from(&matrix_proj);
+                    let new_block =
+                        new_subspace.transpose() * matrix_subspace.columns(dim_sub, conf.init_dim);
+                    let mut slice = tmp.index_mut((.., dim_sub..));
+                    slice.copy_from(&new_block);
+                    let mut slice = tmp.index_mut((dim_sub.., ..));
+                    slice.copy_from(&new_block.transpose());
+                    tmp
                 };
 
                 // update counter
@@ -171,12 +186,12 @@ impl EigenDavidson {
                 update_subspace(&mut basis, ritz_vectors, (0, dim_sub));
                 // Update projected matrix
                 matrix_subspace = h.matrix_matrix_prod(basis.columns(0, dim_sub));
+                matrix_proj = basis.columns(0, dim_sub).transpose() * &matrix_subspace;
             }
             // Check number of iterations
             if i > conf.max_iters {
                 break;
             }
-            matrix_proj = basis.columns(0, dim_sub).transpose() * &matrix_subspace;
         }
         result
     }
