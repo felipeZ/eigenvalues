@@ -4,7 +4,7 @@
 
 ## Fixed
 * Only orthogonalize the new vectors added to the subpace
-
+* Add Eigendavidson argument documentation
 
 ## [0.2.0] 28-02-2029
 
