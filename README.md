@@ -5,9 +5,12 @@
 
 Eigenvalue Decomposition
 ========================
-This package contains some iterative algorithms for computing the eigenvalues/eigenvectors of a symmetric matrix, implemented in [Rust](https://www.rust-lang.org/).
+This package contains some iterative algorithms for computing the eigenvalues/eigenvectors of a symmetric matrix **H**, implemented in [Rust](https://www.rust-lang.org/).
 
-Available Algorithms:
+## Matrix Representation
+The library examples represent **H** using the [nalgebra](https://nalgebra.org/) *DMatrix* type, but the matrix **H** does not need to be dense. Sparse or other representations are handled by implementing the `Matrixoperations` trait.
+
+## Available Algorithms:
  * **Davidson** using either  Diagonal-Preconditioned-Residue (**DPR**) or Generalized Jacobi Davidson (**GJD**). See [Davidson Diagonalization Method](https://www.semanticscholar.org/paper/DAVIDSON-DIAGONALIZATION-METHOD-AND-ITS-APPLICATION-Liao/5811eaf768d1a006f505dfe24f329874a679ba59)
 
 
