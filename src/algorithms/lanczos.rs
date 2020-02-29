@@ -7,8 +7,11 @@ eigenvalues of an hermitian matrix using a [Krylov subspace](https://en.wikipedi
 
 */
 extern crate nalgebra as na;
+use super::SpectrumTarget;
+use crate::matrix_operations::MatrixOperations;
 
-Pub struct HermitianLanczos {
+use na::{DMatrix, DVector};
+pub struct HermitianLanczos {
     pub eigenvalues: DVector<f64>,
     pub eigenvectors: DMatrix<f64>,
 }
@@ -26,5 +29,11 @@ impl HermitianLanczos {
         spectrum_target: SpectrumTarget,
         tolerance: f64,
     ) -> Result<Self, &'static str> {
+        let eigenvalues = DVector::<f64>::zeros(h.nrows());
+        let eigenvectors = DMatrix::<f64>::zeros(h.nrows(), h.ncols());
+        Ok(HermitianLanczos {
+            eigenvalues,
+            eigenvectors,
+        })
     }
 }

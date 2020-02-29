@@ -4,6 +4,7 @@
 
 */
 pub mod davidson;
+pub mod lanczos;
 
 /// Option to compute the lowest, highest or somewhere in the middle part of the
 /// spectrum
