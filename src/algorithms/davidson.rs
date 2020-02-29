@@ -99,7 +99,7 @@ impl EigenDavidson {
         tolerance: f64,
     ) -> Result<Self, &'static str> {
         // Initial configuration
-        let conf = Config::new(nvalues, h.rows(), method, spectrum_target, tolerance);
+        let conf = Config::new(nvalues, h.nrows(), method, spectrum_target, tolerance);
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
@@ -304,9 +304,9 @@ where
         eigenvalues: &DVector<f64>,
     ) -> DMatrix<f64> {
         let d = self.target.diagonal();
-        let mut correction = DMatrix::<f64>::zeros(self.target.rows(), residues.ncols());
+        let mut correction = DMatrix::<f64>::zeros(self.target.nrows(), residues.ncols());
         for (k, lambda) in eigenvalues.iter().enumerate() {
-            let tmp = DVector::<f64>::repeat(self.target.rows(), *lambda) - &d;
+            let tmp = DVector::<f64>::repeat(self.target.nrows(), *lambda) - &d;
             let rs = residues.column(k).component_div(&tmp);
             correction.set_column(k, &rs);
         }
@@ -320,7 +320,7 @@ where
         eigenvalues: &DVector<f64>,
         ritz_vectors: &DMatrix<f64>,
     ) -> DMatrix<f64> {
-        let dimx = self.target.rows();
+        let dimx = self.target.nrows();
         let dimy = residues.ncols();
         let id = DMatrix::<f64>::identity(dimx, dimx);
         let ones = DVector::<f64>::repeat(dimx, 1.0);
