@@ -79,12 +79,12 @@ impl Config {
 }
 
 /// Structure with the configuration data
-pub struct EigenDavidson {
+pub struct Davidson {
     pub eigenvalues: DVector<f64>,
     pub eigenvectors: DMatrix<f64>,
 }
 
-impl EigenDavidson {
+impl Davidson {
     /// The new static method takes the following arguments:
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
@@ -205,7 +205,7 @@ impl EigenDavidson {
         subspace_eigenvalues: &DVector<f64>,
         ritz_vectors: &DMatrix<f64>,
         nvalues: usize,
-    ) -> EigenDavidson {
+    ) -> Davidson {
         let eigenvectors = DMatrix::<f64>::from_iterator(
             ritz_vectors.nrows(),
             nvalues,
@@ -215,7 +215,7 @@ impl EigenDavidson {
             nvalues,
             subspace_eigenvalues.rows(0, nvalues).iter().cloned(),
         );
-        EigenDavidson {
+        Davidson {
             eigenvalues,
             eigenvectors,
         }
