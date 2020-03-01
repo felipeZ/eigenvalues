@@ -3,7 +3,7 @@ extern crate eigenvalues;
 extern crate nalgebra as na;
 
 use approx::relative_eq;
-use eigenvalues::algorithms::davidson::EigenDavidson;
+use eigenvalues::algorithms::davidson::Davidson;
 use eigenvalues::utils::generate_diagonal_dominant;
 use eigenvalues::utils::sort_eigenpairs;
 use eigenvalues::SpectrumTarget;
@@ -16,9 +16,9 @@ fn test_davidson_lowest() {
     let tolerance = 1.0e-4;
 
     let dav_eig =
-        EigenDavidson::new(arr.clone(), 2, "DPR", spectrum_target.clone(), tolerance).unwrap();
+        Davidson::new(arr.clone(), 2, "DPR", spectrum_target.clone(), tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
-    let dav_eig = EigenDavidson::new(arr.clone(), 2, "GJD", spectrum_target, tolerance).unwrap();
+    let dav_eig = Davidson::new(arr.clone(), 2, "GJD", spectrum_target, tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 2);
 }
 
@@ -30,7 +30,7 @@ fn test_davidson_unsorted() {
     let vs = na::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
     arr.set_diagonal(&vs);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
-    let dav_eig = EigenDavidson::new(arr, 1, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();
+    let dav_eig = Davidson::new(arr, 1, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, 1);
 }
 
@@ -46,16 +46,16 @@ fn test_davidson_highest() {
     let target = SpectrumTarget::Highest;
     println!("running DPR");
     let dav_eig =
-        EigenDavidson::new(arr.clone(), nvalues, "DPR", target.clone(), tolerance).unwrap();
+        Davidson::new(arr.clone(), nvalues, "DPR", target.clone(), tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, nvalues);
     println!("running GJD");
-    let dav_eig = EigenDavidson::new(arr.clone(), nvalues, "GJD", target, tolerance).unwrap();
+    let dav_eig = Davidson::new(arr.clone(), nvalues, "GJD", target, tolerance).unwrap();
     test_eigenpairs(&eig, dav_eig, nvalues);
 }
 
 fn test_eigenpairs(
     reference: &na::linalg::SymmetricEigen<f64, na::Dynamic>,
-    dav_eig: EigenDavidson,
+    dav_eig: Davidson,
     number: usize,
 ) {
     for i in 0..number {

@@ -2,9 +2,12 @@
 
 ## [0.2.1]
 
-## Fixed
-* Only orthogonalize the new vectors added to the subpace
-* Add Eigendavidson argument documentation
+### Fixed
+* Only orthogonalize the new vectors added to the subpace.
+* Add Eigendavidson argument documentation.
+
+### Changed
+* Renamed struc `Eigendavidson` => `Davidson`.
 
 ## [0.2.0] 28-02-2029
 
