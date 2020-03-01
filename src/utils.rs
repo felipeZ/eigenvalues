@@ -5,6 +5,9 @@
  */
 
 extern crate nalgebra as na;
+extern crate approx;
+
+use approx::relative_eq;
 use na::linalg::SymmetricEigen;
 use na::Dynamic;
 use na::{DMatrix, DVector};
@@ -19,6 +22,12 @@ pub fn generate_diagonal_dominant(dim: usize, sparsity: f64) -> DMatrix<f64> {
     arr *= sparsity;
     arr.set_diagonal(&vs);
     arr
+}
+
+/// Random symmetric matrix
+pub fn generate_random_symmetric(dim: usize, sparsity: f64) -> DMatrix<f64> {
+    let arr = DMatrix::<f64>::new_random(dim, dim) * sparsity;
+    &arr * arr.transpose()
 }
 
 /// Sort the eigenvalues and their corresponding eigenvectors in ascending order
@@ -60,5 +69,50 @@ pub fn sort_vector<T: PartialOrd>(vs: &mut Vec<T>, ascending: bool) {
         vs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
     } else {
         vs.sort_unstable_by(|a, b| b.partial_cmp(a).unwrap());
+    }
+}
+
+pub fn test_eigenpairs(
+    reference: &na::linalg::SymmetricEigen<f64, na::Dynamic>,
+    eigenpair: (na::DVector<f64>, na::DMatrix<f64>),
+    number: usize,
+) {
+    let (dav_eigenvalues, dav_eigenvectors) = eigenpair;
+    for i in 0..number {
+        // Test Eigenvalues
+        assert!(relative_eq!(
+            reference.eigenvalues[i],
+            dav_eigenvalues[i],
+            epsilon = 1e-6
+        ));
+        // Test Eigenvectors
+        let x = reference.eigenvectors.column(i);
+        let y = dav_eigenvectors.column(i);
+        // The autovectors may different in their sign
+        // They should be either parallel or antiparallel
+        let dot = x.dot(&y).abs();
+        assert!(relative_eq!(dot, 1.0, epsilon = 1e-8));
+    }
+}
+
+#[cfg(test)]
+mod test {
+    extern crate nalgebra as na;
+    use std::f64;
+
+    #[test]
+    fn test_random_symmetric() {
+        let matrix = super::generate_random_symmetric(10, 2.5);
+        test_symmetric(matrix);
+    }
+    #[test]
+    fn test_diagonal_dominant() {
+        let matrix = super::generate_diagonal_dominant(10, 0.005);
+        test_symmetric(matrix);
+    }
+
+    fn test_symmetric(matrix: na::DMatrix<f64>) {
+        let rs = &matrix - &matrix.transpose();
+        assert!(rs.sum() < f64::EPSILON);
     }
 }
