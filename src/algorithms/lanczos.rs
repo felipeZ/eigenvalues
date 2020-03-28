@@ -9,8 +9,8 @@ eigenvalues of an hermitian matrix using a [Krylov subspace](https://en.wikipedi
 extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
-
 use na::{DMatrix, DVector};
+
 pub struct HermitianLanczos {
     pub eigenvalues: DVector<f64>,
     pub eigenvectors: DMatrix<f64>,
@@ -31,6 +31,31 @@ impl HermitianLanczos {
     ) -> Result<Self, &'static str> {
         let eigenvalues = DVector::<f64>::zeros(h.nrows());
         let eigenvectors = DMatrix::<f64>::zeros(h.nrows(), h.ncols());
+        let max_iters = 50;
+
+        // Off-diagonal elements
+        let mut betas = DVector::<f64>::zeros(max_iters);
+        // Diagonal elements
+        let mut alphas = DVector::<f64>::zeros(max_iters);
+
+        // Initial guess of the eigenvector
+        let mut vs = DVector::<f64>::zeros(h.ncols());
+	vs[1] = 0.0;
+
+        let mut residues = DVector::<f64>::zeros(h.ncols());
+        // Compute the elements of the tridiagonal matrix
+        for i in 0..max_iters {
+            let tmp = &h.matrix_vector_prod(&vs);
+            alphas[i] = tmp.dot(&vs);
+	    vs.copy_from(&(tmp));
+            betas[i] = residues.norm();
+            if (betas[i]) < tolerance {
+                break;
+            } else {
+                vs.copy_from(&residues / betas[i]);
+            }
+        }
+
         Ok(HermitianLanczos {
             eigenvalues,
             eigenvectors,
