@@ -30,30 +30,31 @@ impl HermitianLanczos {
         tolerance: f64,
     ) -> Result<Self, &'static str> {
         let eigenvalues = DVector::<f64>::zeros(h.nrows());
-        let eigenvectors = DMatrix::<f64>::zeros(h.nrows(), h.ncols());
-        let max_iters = 50;
+        let eigenvectors = DMatrix::<f64>::zeros(h.nrows(), nvalues);
+        let max_iters = (nvalues as f64 * 1.5).floor() as usize;
 
         // Off-diagonal elements
         let mut betas = DVector::<f64>::zeros(max_iters);
         // Diagonal elements
-        let mut alphas = DVector::<f64>::zeros(max_iters);
+        let mut alphas: DVector<f64> = h.diagonal().clone();
 
-        // Initial guess of the eigenvector
-        let mut vs = DVector::<f64>::zeros(h.ncols());
-	vs[1] = 0.0;
+        // Matrix with the orthognal vectors
+        let mut vs = DMatrix::<f64>::zeros(h.nrows(), max_iters);
 
-        let mut residues = DVector::<f64>::zeros(h.ncols());
+        // Initial vector
+        let xs = DVector::<f64>::new_random(h.nrows()).normalize();
+        vs.set_column(1, &xs);
+
+        // let mut residues = DVector::<f64>::zeros(h.nrows());
         // Compute the elements of the tridiagonal matrix
-        for i in 0..max_iters {
-            let tmp = &h.matrix_vector_prod(&vs);
-            alphas[i] = tmp.dot(&vs);
-	    vs.copy_from(&(tmp));
-            betas[i] = residues.norm();
-            if (betas[i]) < tolerance {
-                break;
-            } else {
-                vs.copy_from(&residues / betas[i]);
-            }
+        for i in 1..max_iters {
+            let tmp = &h.matrix_vector_prod(vs.column(i)) * (betas[i] * vs[i - 1]);
+            alphas[i] = tmp.dot(&vs.column(i));
+            let tmp = tmp - alphas[i] * vs.column(i);
+	    if i < max_iters - 1 {
+	        betas[i + 1] = tmp.norm_squared();
+		vs.set_column(i + 1, &(tmp / betas[i + 1]));
+	    }
         }
 
         Ok(HermitianLanczos {
