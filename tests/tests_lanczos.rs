@@ -14,9 +14,10 @@ fn test_lanczos() {
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(matrix.clone()), false);
     let spectrum_target = SpectrumTarget::Highest;
 
-    let lanczos = HermitianLanczos::new(matrix.clone(), 2, spectrum_target).unwrap();
+    let lanczos = HermitianLanczos::new(matrix.clone(), 1, spectrum_target).unwrap();
 
-    println!("Expected eigenvalues:\n{}", eig.eigenvalues);
+    println!("Computed eigenvalues:\n{}", lanczos.eigenvalues[1]);
+    println!("Expected eigenvalues:\n{}", eig.eigenvalues[1]);
     test_eigenpairs(&eig, (lanczos.eigenvalues, lanczos.eigenvectors), 2);
 
 }

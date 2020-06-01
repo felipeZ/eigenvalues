@@ -29,7 +29,7 @@ impl HermitianLanczos {
         nvalues: usize,
         spectrum_target: SpectrumTarget,
     ) -> Result<Self, &'static str> {
-        let max_iters = (nvalues as f64 * 2.5).floor() as usize;
+        let max_iters = (nvalues as f64 * 3.0).floor() as usize;
 
         // Off-diagonal elements
         let mut betas = DVector::<f64>::zeros(max_iters - 1);
@@ -64,15 +64,13 @@ impl HermitianLanczos {
             }
         }
         let tridiagonal = Self::construct_tridiagonal(&alphas, &betas);
-        println!("tridiagonal:\n{}", tridiagonal);
         let ord_sort = match spectrum_target {
             SpectrumTarget::Highest => false,
             _ => true,
         };
         let eig = utils::sort_eigenpairs(SymmetricEigen::new(tridiagonal), ord_sort);
         let eigenvalues = eig.eigenvalues;
-        let eigenvectors = eig.eigenvectors;
-        println!("eigenvalues:{}", eigenvalues);
+        let eigenvectors = vs * eig.eigenvectors; // Ritz vectors
 
         Ok(HermitianLanczos {
             eigenvalues,
