@@ -11,12 +11,12 @@ use eigenvalues::utils::{sort_eigenpairs, test_eigenpairs};
 #[test]
 fn test_lanczos() {
     let matrix = generate_diagonal_dominant(10, 1.0);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(matrix.clone()), true);
-    let spectrum_target = SpectrumTarget::Lowest;
-    let tolerance = 1.0e-4;
+    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(matrix.clone()), false);
+    let spectrum_target = SpectrumTarget::Highest;
 
-    let lanczos = HermitianLanczos::new(matrix.clone(), 2, spectrum_target, tolerance).unwrap();
+    let lanczos = HermitianLanczos::new(matrix.clone(), 2, spectrum_target).unwrap();
 
+    println!("Expected eigenvalues:\n{}", eig.eigenvalues);
     test_eigenpairs(&eig, (lanczos.eigenvalues, lanczos.eigenvectors), 2);
 
 }

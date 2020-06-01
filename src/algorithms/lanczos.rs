@@ -9,6 +9,8 @@ eigenvalues of an hermitian matrix using a [Krylov subspace](https://en.wikipedi
 extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
+use crate::utils;
+use na::linalg::SymmetricEigen;
 use na::{DMatrix, DVector};
 
 pub struct HermitianLanczos {
@@ -21,45 +23,76 @@ impl HermitianLanczos {
     /// * `h` - A highly diagonal symmetric matrix
     /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
     /// * `spectrum_target` Lowest or Highest part of the spectrum
-    /// * `tolerance` numerical tolerance.
 
     pub fn new<M: MatrixOperations>(
         h: M,
         nvalues: usize,
         spectrum_target: SpectrumTarget,
-        tolerance: f64,
     ) -> Result<Self, &'static str> {
-        let eigenvalues = DVector::<f64>::zeros(h.nrows());
-        let eigenvectors = DMatrix::<f64>::zeros(h.nrows(), nvalues);
-        let max_iters = (nvalues as f64 * 1.5).floor() as usize;
+        let max_iters = (nvalues as f64 * 2.5).floor() as usize;
 
         // Off-diagonal elements
-        let mut betas = DVector::<f64>::zeros(max_iters);
+        let mut betas = DVector::<f64>::zeros(max_iters - 1);
         // Diagonal elements
-        let mut alphas: DVector<f64> = h.diagonal().clone();
+        let mut alphas: DVector<f64> = DVector::<f64>::zeros(max_iters);
 
         // Matrix with the orthognal vectors
         let mut vs = DMatrix::<f64>::zeros(h.nrows(), max_iters);
 
         // Initial vector
         let xs = DVector::<f64>::new_random(h.nrows()).normalize();
-        vs.set_column(1, &xs);
+        vs.set_column(0, &xs);
 
-        // let mut residues = DVector::<f64>::zeros(h.nrows());
         // Compute the elements of the tridiagonal matrix
-        for i in 1..max_iters {
-            let tmp = &h.matrix_vector_prod(vs.column(i)) * (betas[i] * vs[i - 1]);
+        for i in 0..max_iters {
+            let tmp: DVector<f64> = h.matrix_vector_prod(vs.column(i));
             alphas[i] = tmp.dot(&vs.column(i));
-            let tmp = tmp - alphas[i] * vs.column(i);
-	    if i < max_iters - 1 {
-	        betas[i + 1] = tmp.norm_squared();
-		vs.set_column(i + 1, &(tmp / betas[i + 1]));
-	    }
+            let tmp = {
+                if i == 0 {
+                    &tmp - alphas[0] * vs.column(0)
+                } else {
+                    &tmp - alphas[i] * vs.column(i) - betas[i - 1] * vs.column(i - 1)
+                }
+            };
+            if i < max_iters - 1 {
+                betas[i] = tmp.norm();
+                if betas[i] > 1.0e-8 {
+                    vs.set_column(i + 1, &(tmp / betas[i]));
+                } else {
+                    vs.set_column(i + 1, &tmp);
+                }
+            }
         }
+        let tridiagonal = Self::construct_tridiagonal(&alphas, &betas);
+        println!("tridiagonal:\n{}", tridiagonal);
+        let ord_sort = match spectrum_target {
+            SpectrumTarget::Highest => false,
+            _ => true,
+        };
+        let eig = utils::sort_eigenpairs(SymmetricEigen::new(tridiagonal), ord_sort);
+        let eigenvalues = eig.eigenvalues;
+        let eigenvectors = eig.eigenvectors;
+        println!("eigenvalues:{}", eigenvalues);
 
         Ok(HermitianLanczos {
             eigenvalues,
             eigenvectors,
         })
+    }
+
+    fn construct_tridiagonal(alphas: &DVector<f64>, betas: &DVector<f64>) -> DMatrix<f64> {
+        let dim = alphas.len();
+        let lambda = |i, j| {
+            if i == j {
+                alphas[i]
+            } else if i == j + 1 {
+                betas[j]
+            } else if j == i + 1 {
+                betas[i]
+            } else {
+                0.0
+            }
+        };
+        DMatrix::<f64>::from_fn(dim, dim, lambda)
     }
 }
