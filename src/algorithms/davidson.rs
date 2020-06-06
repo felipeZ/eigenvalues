@@ -103,7 +103,7 @@ impl Davidson {
 
         // Initial subpace
         let mut dim_sub = conf.init_dim;
-        // 1.1 Select the initial ortogonal subspace based on lowest elements
+        // 1.1 Select the initial ortogonal subspace
         let mut basis = Self::generate_subspace(&h.diagonal(), &conf);
 
         // 1.2 Select the correction to use

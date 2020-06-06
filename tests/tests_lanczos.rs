@@ -18,6 +18,6 @@ fn test_lanczos() {
 
     println!("Computed eigenvalues:\n{}", lanczos.eigenvalues[1]);
     println!("Expected eigenvalues:\n{}", eig.eigenvalues[1]);
-    test_eigenpairs(&eig, (lanczos.eigenvalues, lanczos.eigenvectors), 2);
+    test_eigenpairs(&eig, (lanczos.eigenvalues, lanczos.eigenvectors), 1);
 
 }

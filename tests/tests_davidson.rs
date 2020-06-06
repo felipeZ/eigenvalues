@@ -2,7 +2,6 @@ extern crate approx;
 extern crate eigenvalues;
 extern crate nalgebra as na;
 
-use approx::relative_eq;
 use eigenvalues::algorithms::davidson::Davidson;
 use eigenvalues::utils::generate_diagonal_dominant;
 use eigenvalues::utils::{sort_eigenpairs, test_eigenpairs};

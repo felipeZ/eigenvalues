@@ -63,6 +63,7 @@ impl HermitianLanczos {
                 }
             }
         }
+
         let tridiagonal = Self::construct_tridiagonal(&alphas, &betas);
         let ord_sort = match spectrum_target {
             SpectrumTarget::Highest => false,
