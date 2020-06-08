@@ -2,6 +2,8 @@
 [![Build Status](https://github.com/felipeZ/eigenvalues/workflows/build/badge.svg)](https://github.com/felipeZ/eigenvalues/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![crates.io badge](https://img.shields.io/crates/v/eigenvalues.svg)](https://crates.io/crates/eigenvalues)<br/>
+[![docs](https://docs.rs/eigenvalues/badge.svg)](https://docs.rs/eigenvalues/0.3.0/eigenvalues/)
+https://docs.rs/eigenvalues/0.3.0/eigenvalues/
 
 Eigenvalue Decomposition
 ========================
