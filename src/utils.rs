@@ -25,9 +25,24 @@ pub fn generate_diagonal_dominant(dim: usize, sparsity: f64) -> DMatrix<f64> {
 }
 
 /// Random symmetric matrix
-pub fn generate_random_symmetric(dim: usize, sparsity: f64) -> DMatrix<f64> {
-    let arr = DMatrix::<f64>::new_random(dim, dim) * sparsity;
+pub fn generate_random_symmetric(dim: usize, magnitude: f64) -> DMatrix<f64> {
+    let arr = DMatrix::<f64>::new_random(dim, dim) * magnitude;
     &arr * arr.transpose()
+}
+
+/// Random Sparse matrix
+pub fn generate_random_sparse_symmetric(dim: usize, lim: usize, sparsity: f64) -> DMatrix<f64> {
+    let arr = generate_diagonal_dominant(dim, sparsity);
+    let lambda = |i, j| {
+	if j > i + lim {
+	    0.0
+	} else if i > j + lim {
+	    0.0
+	} else {
+	    arr[(i, j)]
+	}
+    };
+    DMatrix::<f64>::from_fn(dim, dim, lambda)
 }
 
 /// Sort the eigenvalues and their corresponding eigenvectors in ascending order

@@ -29,7 +29,9 @@ impl HermitianLanczos {
         nvalues: usize,
         spectrum_target: SpectrumTarget,
     ) -> Result<Self, &'static str> {
-        let max_iters = (nvalues as f64 * 3.0).floor() as usize;
+        let tolerance = 1e-8;
+
+        let max_iters = (nvalues as f64 * 5.0).floor() as usize;
 
         // Off-diagonal elements
         let mut betas = DVector::<f64>::zeros(max_iters - 1);
@@ -47,23 +49,29 @@ impl HermitianLanczos {
         for i in 0..max_iters {
             let tmp: DVector<f64> = h.matrix_vector_prod(vs.column(i));
             alphas[i] = tmp.dot(&vs.column(i));
-            let tmp = {
+            let mut tmp = {
                 if i == 0 {
                     &tmp - alphas[0] * vs.column(0)
                 } else {
                     &tmp - alphas[i] * vs.column(i) - betas[i - 1] * vs.column(i - 1)
                 }
             };
+            // Orthogonalize with previous vectors
+            for k in 0..i {
+                let projection = tmp.dot(&vs.column(k));
+                if projection.abs() > tolerance {
+                    tmp -= projection * vs.column(i);
+                }
+            }
             if i < max_iters - 1 {
                 betas[i] = tmp.norm();
-                if betas[i] > 1.0e-8 {
+                if betas[i] > tolerance {
                     vs.set_column(i + 1, &(tmp / betas[i]));
                 } else {
                     vs.set_column(i + 1, &tmp);
                 }
             }
         }
-
         let tridiagonal = Self::construct_tridiagonal(&alphas, &betas);
         let ord_sort = match spectrum_target {
             SpectrumTarget::Highest => false,
