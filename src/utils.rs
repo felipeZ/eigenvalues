@@ -35,6 +35,7 @@ pub fn generate_random_sparse_symmetric(dim: usize, lim: usize, sparsity: f64) -
     let arr = generate_diagonal_dominant(dim, sparsity);
     let lambda = |i, j| {
         if j > i + lim && i > j + lim {
+            0.0
         } else {
             arr[(i, j)]
         }
