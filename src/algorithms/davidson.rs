@@ -115,7 +115,7 @@ impl Davidson {
         let mut matrix_proj = first_subspace.transpose() * &matrix_subspace;
 
         // Outer loop block Davidson schema
-        let mut result = Err("Algorithm didn't converge!");
+        let mut result = Err("Davidson Algorithm did not converge!");
         for i in 0..conf.max_iters {
             // 3. compute the eigenvalues and their corresponding ritz_vectors
             let ord_sort = match conf.spectrum_target {
