@@ -4,8 +4,8 @@
 
  */
 
-extern crate nalgebra as na;
 extern crate approx;
+extern crate nalgebra as na;
 
 use approx::relative_eq;
 use na::linalg::SymmetricEigen;
@@ -34,13 +34,13 @@ pub fn generate_random_symmetric(dim: usize, magnitude: f64) -> DMatrix<f64> {
 pub fn generate_random_sparse_symmetric(dim: usize, lim: usize, sparsity: f64) -> DMatrix<f64> {
     let arr = generate_diagonal_dominant(dim, sparsity);
     let lambda = |i, j| {
-	if j > i + lim {
-	    0.0
-	} else if i > j + lim {
-	    0.0
-	} else {
-	    arr[(i, j)]
-	}
+        if j > i + lim {
+            0.0
+        } else if i > j + lim {
+            0.0
+        } else {
+            arr[(i, j)]
+        }
     };
     DMatrix::<f64>::from_fn(dim, dim, lambda)
 }
@@ -106,7 +106,7 @@ pub fn test_eigenpairs(
         // The autovectors may different in their sign
         // They should be either parallel or antiparallel
         let dot = x.dot(&y).abs();
-        assert!(relative_eq!(dot, 1.0, epsilon = 1e-8));
+        assert!(relative_eq!(dot, 1.0, epsilon = 1e-6));
     }
 }
 

@@ -1,6 +1,6 @@
 [package]
 name = "eigenvalues"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["felipe <tifonzafel@gmail.com>"]
 description = "algorithms to compute eigenvalue/eigenvectors of symmetric matrices"
 readme = "README.md"

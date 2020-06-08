@@ -21,32 +21,30 @@ pub struct HermitianLanczos {
 impl HermitianLanczos {
     /// The new static method takes the following arguments:
     /// * `h` - A highly diagonal symmetric matrix
-    /// * `nvalues` - the number of eigenvalues/eigenvectors pair to compute
+    /// * `maximum_iterations` - Krylov subspace size
     /// * `spectrum_target` Lowest or Highest part of the spectrum
 
     pub fn new<M: MatrixOperations>(
         h: M,
-        nvalues: usize,
+        maximum_iterations: usize,
         spectrum_target: SpectrumTarget,
     ) -> Result<Self, &'static str> {
         let tolerance = 1e-8;
 
-        let max_iters = (nvalues as f64 * 5.0).floor() as usize;
-
         // Off-diagonal elements
-        let mut betas = DVector::<f64>::zeros(max_iters - 1);
+        let mut betas = DVector::<f64>::zeros(maximum_iterations - 1);
         // Diagonal elements
-        let mut alphas: DVector<f64> = DVector::<f64>::zeros(max_iters);
+        let mut alphas: DVector<f64> = DVector::<f64>::zeros(maximum_iterations);
 
         // Matrix with the orthognal vectors
-        let mut vs = DMatrix::<f64>::zeros(h.nrows(), max_iters);
+        let mut vs = DMatrix::<f64>::zeros(h.nrows(), maximum_iterations);
 
         // Initial vector
         let xs = DVector::<f64>::new_random(h.nrows()).normalize();
         vs.set_column(0, &xs);
 
         // Compute the elements of the tridiagonal matrix
-        for i in 0..max_iters {
+        for i in 0..maximum_iterations {
             let tmp: DVector<f64> = h.matrix_vector_prod(vs.column(i));
             alphas[i] = tmp.dot(&vs.column(i));
             let mut tmp = {
@@ -63,7 +61,7 @@ impl HermitianLanczos {
                     tmp -= projection * vs.column(i);
                 }
             }
-            if i < max_iters - 1 {
+            if i < maximum_iterations - 1 {
                 betas[i] = tmp.norm();
                 if betas[i] > tolerance {
                     vs.set_column(i + 1, &(tmp / betas[i]));

@@ -1,6 +1,7 @@
-# [Unreleased]
+## [0.2.1] 08/06/2020
 
-## [0.2.1]
+### New
+* Add Lanczos algorithm (#12)
 
 ### Fixed
 * Only orthogonalize the new vectors added to the subpace.
