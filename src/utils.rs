@@ -34,10 +34,7 @@ pub fn generate_random_symmetric(dim: usize, magnitude: f64) -> DMatrix<f64> {
 pub fn generate_random_sparse_symmetric(dim: usize, lim: usize, sparsity: f64) -> DMatrix<f64> {
     let arr = generate_diagonal_dominant(dim, sparsity);
     let lambda = |i, j| {
-        if j > i + lim {
-            0.0
-        } else if i > j + lim {
-            0.0
+        if j > i + lim && i > j + lim {
         } else {
             arr[(i, j)]
         }
