@@ -55,7 +55,7 @@ println!("Expected eigenvalues:\n{}", eig.eigenvalues.rows(0, 3));
 
 pub mod algorithms;
 pub mod matrix_operations;
-pub mod modified_gram_schmidt;
+pub mod orthonormalization;
 pub mod utils;
 pub use algorithms::{davidson, lanczos, SpectrumTarget};
-pub use modified_gram_schmidt::MGS;
+pub use orthonormalization::MGS;

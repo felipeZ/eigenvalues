@@ -1,15 +1,21 @@
 /*!
 
-# Modified Gram-Schmidt (MGS)
-
+## Gram-Schmidt (GS)
 The Gram-Schmidt method is a method for orthonormalising a set of vectors. see:
 [Gram-Schmidt process](https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process)
+
+## Modified Gram-Schmidt (MGS)
+
 The MGS method improves the orthogonality loss due to the finite numerical precision
 on computers.
  */
 
 extern crate nalgebra as na;
 use na::{DMatrix, DVector, DVectorSlice};
+
+pub struct GS {
+    pub basis: DMatrix<f64>,
+}
 
 pub struct MGS {
     pub basis: DMatrix<f64>,
