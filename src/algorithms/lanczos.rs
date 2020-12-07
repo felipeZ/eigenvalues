@@ -6,12 +6,11 @@ The [Hermitian Lanczos](https://en.wikipedia.org/wiki/Lanczos_algorithm) is an a
 eigenvalues of an hermitian matrix using a [Krylov subspace](https://en.wikipedia.org/wiki/Krylov_subspace)
 
 */
-extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
-use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector};
+use nalgebra::linalg::SymmetricEigen;
+use nalgebra::{DMatrix, DVector};
 
 pub struct HermitianLanczos {
     pub eigenvalues: DVector<f64>,

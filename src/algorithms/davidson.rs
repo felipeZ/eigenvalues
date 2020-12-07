@@ -18,13 +18,12 @@ Available correction methods are:
 
 */
 
-extern crate nalgebra as na;
 use super::SpectrumTarget;
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use crate::MGS;
-use na::linalg::SymmetricEigen;
-use na::{DMatrix, DVector, Dynamic};
+use nalgebra::linalg::SymmetricEigen;
+use nalgebra::{DMatrix, DVector, Dynamic};
 use std::f64;
 use std::ops::Not;
 

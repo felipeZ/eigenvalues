@@ -4,7 +4,6 @@
 
  */
 
-extern crate approx;
 extern crate nalgebra as na;
 
 use approx::relative_eq;

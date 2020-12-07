@@ -9,7 +9,7 @@ on computers.
  */
 
 extern crate nalgebra as na;
-use na::{DMatrix, DVector, DVectorSlice};
+use nalgebra::{DMatrix, DVector, DVectorSlice};
 
 pub struct MGS {
     pub basis: DMatrix<f64>,

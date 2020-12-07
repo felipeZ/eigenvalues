@@ -1,4 +1,3 @@
-extern crate eigenvalues;
 extern crate nalgebra as na;
 
 use eigenvalues::algorithms::lanczos::HermitianLanczos;

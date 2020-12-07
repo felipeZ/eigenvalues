@@ -8,8 +8,7 @@ You can use the algorithms for other matrix representations (e.g. matrix-free)
 by providing your own implementation of the **Matrixoperations** trait.
 
 */
-extern crate nalgebra as na;
-use na::{DMatrix, DMatrixSlice, DVector, DVectorSlice};
+use nalgebra::{DMatrix, DMatrixSlice, DVector, DVectorSlice};
 use std::clone::Clone;
 
 /// Trait containing the matrix free operations
