@@ -7,13 +7,10 @@ diagonalize symmetric matrices.
 
 ## Davidson Usage Example
 ```
-extern crate eigenvalues;
-extern crate nalgebra as na;
-
 // Use the Davidson method
 use eigenvalues::davidson::Davidson;
 use eigenvalues::SpectrumTarget;
-use na::{DMatrix, DVector};
+use nalgebra::{DMatrix, DVector};
 
 // Generate random symmetric matrix
 let matrix = eigenvalues::utils::generate_diagonal_dominant(20, 0.005);
@@ -32,8 +29,7 @@ println!("eigenvectors:{}", eig.eigenvectors);
 
 ## Lanczos Usage Example
 ```
-extern crate eigenvalues;
-extern crate nalgebra as na;
+use nalgebra as na;
 
 use eigenvalues::algorithms::lanczos::HermitianLanczos;
 use eigenvalues::utils::{generate_random_sparse_symmetric, sort_eigenpairs};

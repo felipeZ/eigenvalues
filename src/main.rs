@@ -1,4 +1,4 @@
-extern crate nalgebra as na;
+use nalgebra as na;
 
 use eigenvalues::algorithms::lanczos::HermitianLanczos;
 use eigenvalues::utils::{generate_random_sparse_symmetric, sort_eigenpairs};

@@ -4,7 +4,7 @@
 
  */
 
-extern crate nalgebra as na;
+use nalgebra as na;
 
 use approx::relative_eq;
 use na::linalg::SymmetricEigen;
@@ -109,7 +109,7 @@ pub fn test_eigenpairs(
 
 #[cfg(test)]
 mod test {
-    extern crate nalgebra as na;
+    use nalgebra as na;
     use std::f64;
 
     #[test]

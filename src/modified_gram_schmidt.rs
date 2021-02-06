@@ -7,8 +7,6 @@ The Gram-Schmidt method is a method for orthonormalising a set of vectors. see:
 The MGS method improves the orthogonality loss due to the finite numerical precision
 on computers.
  */
-
-extern crate nalgebra as na;
 use nalgebra::{DMatrix, DVector, DVectorSlice};
 
 pub struct MGS {
@@ -39,8 +37,7 @@ impl MGS {
 
 #[cfg(test)]
 mod test {
-    extern crate nalgebra as na;
-    use na::DMatrix;
+    use nalgebra::DMatrix;
 
     #[test]
     fn test_gram_schmidt() {
