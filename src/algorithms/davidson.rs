@@ -116,11 +116,8 @@ impl Davidson {
         // Outer loop block Davidson schema
         let mut result = Err("Davidson Algorithm did not converge!");
         for i in 0..conf.max_iters {
-            // 3. compute the eigenvalues and their corresponding ritz_vectors
-            let ord_sort = match conf.spectrum_target {
-                SpectrumTarget::Highest => false,
-                _ => true,
-            };
+            let ord_sort = !matches!(conf.spectrum_target, SpectrumTarget::Highest);
+
             let eig = utils::sort_eigenpairs(SymmetricEigen::new(matrix_proj.clone()), ord_sort);
 
             // 4. Check for convergence

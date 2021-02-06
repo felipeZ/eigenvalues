@@ -70,10 +70,7 @@ impl HermitianLanczos {
             }
         }
         let tridiagonal = Self::construct_tridiagonal(&alphas, &betas);
-        let ord_sort = match spectrum_target {
-            SpectrumTarget::Highest => false,
-            _ => true,
-        };
+        let ord_sort = !matches!(spectrum_target, SpectrumTarget::Highest);
         let eig = utils::sort_eigenpairs(SymmetricEigen::new(tridiagonal), ord_sort);
         let eigenvalues = eig.eigenvalues;
         let eigenvectors = vs * eig.eigenvectors; // Ritz vectors
