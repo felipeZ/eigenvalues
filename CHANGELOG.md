@@ -1,3 +1,11 @@
+## [0.4.0] Unreleased
+
+### Changed
+* use enum for the davidson correction instead of str (#16)
+
+### Removed
+* Travis CI workflow
+
 ## [0.3.0] 08/06/2020
 
 ### New

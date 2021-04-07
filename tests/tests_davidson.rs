@@ -5,7 +5,7 @@ extern crate nalgebra as na;
 use eigenvalues::algorithms::davidson::Davidson;
 use eigenvalues::utils::generate_diagonal_dominant;
 use eigenvalues::utils::{sort_eigenpairs, test_eigenpairs};
-use eigenvalues::SpectrumTarget;
+use eigenvalues::{DavidsonCorrection, SpectrumTarget};
 
 #[test]
 fn test_davidson_lowest() {
@@ -14,9 +14,23 @@ fn test_davidson_lowest() {
     let spectrum_target = SpectrumTarget::Lowest;
     let tolerance = 1.0e-4;
 
-    let dav = Davidson::new(arr.clone(), 2, "DPR", spectrum_target.clone(), tolerance).unwrap();
+    let dav = Davidson::new(
+        arr.clone(),
+        2,
+        DavidsonCorrection::DPR,
+        spectrum_target.clone(),
+        tolerance,
+    )
+    .unwrap();
     test_eigenpairs(&eig, (dav.eigenvalues, dav.eigenvectors), 2);
-    let dav = Davidson::new(arr.clone(), 2, "GJD", spectrum_target, tolerance).unwrap();
+    let dav = Davidson::new(
+        arr.clone(),
+        2,
+        DavidsonCorrection::GJD,
+        spectrum_target,
+        tolerance,
+    )
+    .unwrap();
     test_eigenpairs(&eig, (dav.eigenvalues, dav.eigenvectors), 2);
 }
 
@@ -28,7 +42,14 @@ fn test_davidson_unsorted() {
     let vs = na::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
     arr.set_diagonal(&vs);
     let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
-    let dav = Davidson::new(arr, 1, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();
+    let dav = Davidson::new(
+        arr,
+        1,
+        DavidsonCorrection::DPR,
+        SpectrumTarget::Lowest,
+        tolerance,
+    )
+    .unwrap();
     test_eigenpairs(&eig, (dav.eigenvalues, dav.eigenvectors), 1);
 }
 
@@ -43,9 +64,23 @@ fn test_davidson_highest() {
 
     let target = SpectrumTarget::Highest;
     println!("running DPR");
-    let dav = Davidson::new(arr.clone(), nvalues, "DPR", target.clone(), tolerance).unwrap();
+    let dav = Davidson::new(
+        arr.clone(),
+        nvalues,
+        DavidsonCorrection::DPR,
+        target.clone(),
+        tolerance,
+    )
+    .unwrap();
     test_eigenpairs(&eig, (dav.eigenvalues, dav.eigenvectors), nvalues);
     println!("running GJD");
-    let dav = Davidson::new(arr.clone(), nvalues, "GJD", target, tolerance).unwrap();
+    let dav = Davidson::new(
+        arr.clone(),
+        nvalues,
+        DavidsonCorrection::GJD,
+        target,
+        tolerance,
+    )
+    .unwrap();
     test_eigenpairs(&eig, (dav.eigenvalues, dav.eigenvectors), nvalues);
 }
