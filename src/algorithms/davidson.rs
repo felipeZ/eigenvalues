@@ -18,18 +18,17 @@ Available correction methods are:
 
 */
 
-use super::SpectrumTarget;
+use super::{DavidsonCorrection, SpectrumTarget};
 use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use crate::MGS;
 use nalgebra::linalg::SymmetricEigen;
 use nalgebra::{DMatrix, DVector, Dynamic};
 use std::f64;
-use std::ops::Not;
 
 /// Structure containing the initial configuration data
 struct Config {
-    method: String,
+    method: DavidsonCorrection,
     spectrum_target: SpectrumTarget,
     tolerance: f64,
     max_iters: usize,
@@ -47,7 +46,7 @@ impl Config {
     fn new(
         nvalues: usize,
         dim: usize,
-        method: &str,
+        method: DavidsonCorrection,
         target: SpectrumTarget,
         tolerance: f64,
     ) -> Self {
@@ -56,17 +55,8 @@ impl Config {
         } else {
             dim
         };
-        // Check that the correction method requested by the user is available
-        let available_methods = ["DPR", "GJD"];
-        if available_methods
-            .iter()
-            .any(|&x| x == method.to_uppercase())
-            .not()
-        {
-            panic!("Method {} is not available!", method);
-        }
         Config {
-            method: String::from(method),
+            method: method,
             spectrum_target: target,
             tolerance,
             max_iters: 50,
@@ -93,7 +83,7 @@ impl Davidson {
     pub fn new<M: MatrixOperations>(
         h: M,
         nvalues: usize,
-        method: &str,
+        method: DavidsonCorrection,
         spectrum_target: SpectrumTarget,
         tolerance: f64,
     ) -> Result<Self, &'static str> {
@@ -106,7 +96,7 @@ impl Davidson {
         let mut basis = Self::generate_subspace(&h.diagonal(), &conf);
 
         // 1.2 Select the correction to use
-        let corrector = CorrectionMethod::<M>::new(&h, &conf.method);
+        let corrector = CorrectionMethod::<M>::new(&h, conf.method);
 
         // 2. Generate subpace matrix problem by projecting into the basis
         let first_subspace = basis.columns(0, dim_sub);
@@ -265,18 +255,15 @@ where
     /// The initial target matrix
     target: &'a M,
     /// Method used to compute the correction
-    method: String,
+    method: DavidsonCorrection,
 }
 
 impl<'a, M> CorrectionMethod<'a, M>
 where
     M: MatrixOperations,
 {
-    fn new(target: &'a M, method: &str) -> CorrectionMethod<'a, M> {
-        CorrectionMethod {
-            target,
-            method: String::from(method),
-        }
+    fn new(target: &'a M, method: DavidsonCorrection) -> CorrectionMethod<'a, M> {
+        CorrectionMethod { target, method }
     }
 
     /// compute the correction vectors using either DPR or GJD
@@ -286,10 +273,11 @@ where
         eigenvalues: &DVector<f64>,
         ritz_vectors: &DMatrix<f64>,
     ) -> DMatrix<f64> {
-        match self.method.to_uppercase().as_ref() {
-            "DPR" => self.compute_dpr_correction(residues, eigenvalues),
-            "GJD" => self.compute_gjd_correction(residues, eigenvalues, ritz_vectors),
-            _ => panic!("Method {} has not been implemented", self.method),
+        match self.method {
+            DavidsonCorrection::DPR => self.compute_dpr_correction(residues, eigenvalues),
+            DavidsonCorrection::GJD => {
+                self.compute_gjd_correction(residues, eigenvalues, ritz_vectors)
+            }
         }
     }
 

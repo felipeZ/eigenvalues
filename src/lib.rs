@@ -9,7 +9,7 @@ diagonalize symmetric matrices.
 ```
 // Use the Davidson method
 use eigenvalues::davidson::Davidson;
-use eigenvalues::SpectrumTarget;
+use eigenvalues::{DavidsonCorrection, SpectrumTarget};
 use nalgebra::{DMatrix, DVector};
 
 // Generate random symmetric matrix
@@ -17,12 +17,12 @@ let matrix = eigenvalues::utils::generate_diagonal_dominant(20, 0.005);
 let tolerance = 1e-4;
 
 // Compute the first 2 lowest eigenvalues/eigenvectors using the DPR method
-let eig = Davidson::new (matrix.clone(), 2, "DPR", SpectrumTarget::Lowest, tolerance).unwrap();
+let eig = Davidson::new (matrix.clone(), 2, DavidsonCorrection::DPR, SpectrumTarget::Lowest, tolerance).unwrap();
 println!("eigenvalues:{}", eig.eigenvalues);
 println!("eigenvectors:{}", eig.eigenvectors);
 
 // Compute the first 2 highest eigenvalues/eigenvectors using the GJD method
-let eig = Davidson::new (matrix, 2, "GJD", SpectrumTarget::Highest, tolerance).unwrap();
+let eig = Davidson::new (matrix, 2, DavidsonCorrection::GJD, SpectrumTarget::Highest, tolerance).unwrap();
 println!("eigenvalues:{}", eig.eigenvalues);
 println!("eigenvectors:{}", eig.eigenvectors);
 ```
@@ -53,5 +53,5 @@ pub mod algorithms;
 pub mod matrix_operations;
 pub mod modified_gram_schmidt;
 pub mod utils;
-pub use algorithms::{davidson, lanczos, SpectrumTarget};
+pub use algorithms::{davidson, lanczos, DavidsonCorrection, SpectrumTarget};
 pub use modified_gram_schmidt::MGS;
