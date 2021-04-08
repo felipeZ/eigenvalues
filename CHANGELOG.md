@@ -1,4 +1,4 @@
-## [0.4.0] Unreleased
+## [0.4.0] 08/04/2021
 
 ### Changed
 * use enum for the davidson correction instead of str (#16)
