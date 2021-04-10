@@ -71,8 +71,8 @@ pub fn sort_eigenpairs(
         eigenvectors.set_column(k, &eig.eigenvectors.column(*i));
     }
     SymmetricEigen {
-        eigenvalues,
         eigenvectors,
+        eigenvalues,
     }
 }
 
