@@ -56,7 +56,7 @@ impl Config {
             dim
         };
         Config {
-            method: method,
+            method,
             spectrum_target: target,
             tolerance,
             max_iters: 50,
