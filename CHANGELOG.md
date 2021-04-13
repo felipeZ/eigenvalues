@@ -1,3 +1,10 @@
+
+## [0.4.1] Unrelease
+
+### Changed
+* bump nalgebra version to 0.26 (#19)
+
+
 ## [0.4.0] 08/04/2021
 
 ### Changed
