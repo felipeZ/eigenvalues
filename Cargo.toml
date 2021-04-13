@@ -12,7 +12,7 @@ edition = "2018"
 
 [dependencies]
 approx = "0.4"
-nalgebra = { version = "0.25", features = ["rand"] }
+nalgebra = { version = "0.26", features = ["rand"] }
 
 [lib]
 name = "eigenvalues"
