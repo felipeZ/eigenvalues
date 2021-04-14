@@ -1,5 +1,3 @@
-extern crate approx;
-extern crate eigenvalues;
 extern crate nalgebra as na;
 
 use eigenvalues::algorithms::davidson::Davidson;
@@ -10,7 +8,7 @@ use eigenvalues::{DavidsonCorrection, SpectrumTarget};
 #[test]
 fn test_davidson_lowest() {
     let arr = generate_diagonal_dominant(10, 0.005);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
+    let eig = sort_eigenpairs(nalgebra::linalg::SymmetricEigen::new(arr.clone()), true);
     let spectrum_target = SpectrumTarget::Lowest;
     let tolerance = 1.0e-4;
 
@@ -39,9 +37,9 @@ fn test_davidson_unsorted() {
     // Test the algorithm when the diagonal is unsorted
     let mut arr = generate_diagonal_dominant(8, 0.005);
     let tolerance = 1.0e-6;
-    let vs = na::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
+    let vs = nalgebra::DVector::<f64>::from_vec(vec![3.0, 2.0, 4.0, 1.0, 5.0, 6.0, 7.0, 8.0]);
     arr.set_diagonal(&vs);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), true);
+    let eig = sort_eigenpairs(nalgebra::linalg::SymmetricEigen::new(arr.clone()), true);
     let dav = Davidson::new(
         arr,
         1,
@@ -60,7 +58,7 @@ fn test_davidson_highest() {
     let nvalues = 2;
     let tolerance = 1.0e-4;
     let arr = generate_diagonal_dominant(dim, 0.005);
-    let eig = sort_eigenpairs(na::linalg::SymmetricEigen::new(arr.clone()), false);
+    let eig = sort_eigenpairs(nalgebra::linalg::SymmetricEigen::new(arr.clone()), false);
 
     let target = SpectrumTarget::Highest;
     println!("running DPR");
