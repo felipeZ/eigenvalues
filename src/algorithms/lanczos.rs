@@ -11,6 +11,19 @@ use crate::matrix_operations::MatrixOperations;
 use crate::utils;
 use nalgebra::linalg::SymmetricEigen;
 use nalgebra::{DMatrix, DVector};
+use std::error;
+use std::fmt;
+
+#[derive(Debug, PartialEq)]
+pub struct LanczosError;
+
+impl fmt::Display for LanczosError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Lanczos Algorithm did not converge!")
+    }
+}
+
+impl error::Error for LanczosError {}
 
 pub struct HermitianLanczos {
     pub eigenvalues: DVector<f64>,
@@ -27,7 +40,7 @@ impl HermitianLanczos {
         h: M,
         maximum_iterations: usize,
         spectrum_target: SpectrumTarget,
-    ) -> Result<Self, &'static str> {
+    ) -> Result<Self, LanczosError> {
         let tolerance = 1e-8;
 
         // Off-diagonal elements

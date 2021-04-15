@@ -3,7 +3,7 @@
 
 ### Changed
 * bump nalgebra version to 0.26 (#19)
-
+* use a custom error instead of a string
 
 ## [0.4.0] 08/04/2021
 

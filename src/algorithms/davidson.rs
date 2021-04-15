@@ -24,7 +24,9 @@ use crate::utils;
 use crate::MGS;
 use nalgebra::linalg::SymmetricEigen;
 use nalgebra::{DMatrix, DVector, Dynamic};
+use std::error;
 use std::f64;
+use std::fmt;
 
 /// Structure containing the initial configuration data
 struct Config {
@@ -66,6 +68,16 @@ impl Config {
         }
     }
 }
+#[derive(Debug, PartialEq)]
+pub struct DavidsonError;
+
+impl fmt::Display for DavidsonError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Davidson Algorithm did not converge!")
+    }
+}
+
+impl error::Error for DavidsonError {}
 
 /// Structure with the configuration data
 pub struct Davidson {
@@ -86,7 +98,7 @@ impl Davidson {
         method: DavidsonCorrection,
         spectrum_target: SpectrumTarget,
         tolerance: f64,
-    ) -> Result<Self, &'static str> {
+    ) -> Result<Self, DavidsonError> {
         // Initial configuration
         let conf = Config::new(nvalues, h.nrows(), method, spectrum_target, tolerance);
 
@@ -104,7 +116,7 @@ impl Davidson {
         let mut matrix_proj = first_subspace.transpose() * &matrix_subspace;
 
         // Outer loop block Davidson schema
-        let mut result = Err("Davidson Algorithm did not converge!");
+        let mut result = Err(DavidsonError);
         for i in 0..conf.max_iters {
             let ord_sort = !matches!(conf.spectrum_target, SpectrumTarget::Highest);
 
