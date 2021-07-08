@@ -11,8 +11,8 @@ license = "Apache-2.0"
 edition = "2018"
 
 [dependencies]
-approx = "0.4"
-nalgebra = { version = "0.26", features = ["rand"] }
+approx = "0.5"
+nalgebra = { version = "0.27", features = ["rand"] }
 
 [lib]
 name = "eigenvalues"
