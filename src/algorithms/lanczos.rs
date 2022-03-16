@@ -79,14 +79,14 @@ impl HermitianLanczos {
                     vs.set_column(i + 1, &(tmp / betas[i]));
                 } else {
                     // Create a new random vector
-                    let mut v_i_plus_1 = DVector::<f64>::new_random(h.nrows()).normalize();
+                    let mut v_i_plus_1 = DVector::<f64>::new_random(h.nrows());
                     // Orthogonalize with previous vectors
                     for k in 0..=i {
                         let projection = v_i_plus_1.dot(&vs.column(k));
                         v_i_plus_1 -= projection * vs.column(k);
                     }
                     
-                    vs.set_column(i + 1, &v_i_plus_1);
+                    vs.set_column(i + 1, &v_i_plus_1.normalize());
                 }
             }
         }
