@@ -70,7 +70,7 @@ impl HermitianLanczos {
             for k in 0..i {
                 let projection = tmp.dot(&vs.column(k));
                 if projection.abs() > tolerance {
-                    tmp -= projection * vs.column(i);
+                    tmp -= projection * vs.column(k);
                 }
             }
             if i < maximum_iterations - 1 {
@@ -78,7 +78,15 @@ impl HermitianLanczos {
                 if betas[i] > tolerance {
                     vs.set_column(i + 1, &(tmp / betas[i]));
                 } else {
-                    vs.set_column(i + 1, &tmp);
+                    // Create a new random vector
+                    let mut v_i_plus_1 = DVector::<f64>::new_random(h.nrows()).normalize();
+                    // Orthogonalize with previous vectors
+                    for k in 0..=i {
+                        let projection = v_i_plus_1.dot(&vs.column(k));
+                        v_i_plus_1 -= projection * vs.column(k);
+                    }
+                    
+                    vs.set_column(i + 1, &v_i_plus_1);
                 }
             }
         }
